@@ -1,0 +1,4 @@
+[submodule "module-core"]
+	path = module-core
+	url = https://gitlab.initcapp.com/aid-app/module-core.git
+	branch = main-v2

@@ -1,0 +1,16 @@
+{
+  "name": "hooks",
+  "private": true,
+  "scripts": {
+    "build": "bun build ./agent.js --outfile ./agent_bundled.js"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "frida-java-bridge": "^7.0.11"
+  }
+}

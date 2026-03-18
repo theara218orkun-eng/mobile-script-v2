@@ -1,0 +1,5 @@
+sqlalchemy
+python-dotenv
+pydantic
+asyncpg
+psycopg2-binary

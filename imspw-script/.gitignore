@@ -1,0 +1,6 @@
+tasks.db
+contacts.db
+.venv
+.env
+tmp
+__pycache__

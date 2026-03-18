@@ -1,0 +1,22 @@
+[tool.ruff.lint.per-file-ignores]
+"module-core/src/scripts/*.py" = ["E402"]
+"module-core/tests/*.py" = ["E402"]
+"test_fix.py" = ["E402"]
+
+[project]
+name = "line-imspw"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "cryptg>=0.4.0",
+    "frida>=17.7.3",
+    "frida-tools>=14.6.0",
+    "pydantic>=2.0.0",
+    "pyjwt>=2.11.0",
+    "python-dotenv>=1.2.1",
+    "requests>=2.32.5",
+    "telethon>=1.42.0",
+    "uiautomator2>=3.5.0",
+]
