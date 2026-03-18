@@ -46,9 +46,16 @@ async def webhook(payload: WebhookPayload, _ = Depends(verify_token)):
         logger.info(f"Received message from {payload.platform} ({payload.device_id}): {decoded_content}")
         logger.debug(f"Full payload: {payload.model_dump()}")
 
-        # Logic for auto-reply can go here
-        # For now, just acknowledge
-        return WebhookResponse(status="ok")
+        # --- TEST AUTO-REPLY LOGIC ---
+        reply_text = "I received your message! (Auto-Reply Test)"
+        
+        if payload.user_info and payload.user_info.username:
+            reply_text = f"Hello {payload.user_info.username}, {reply_text}"
+            
+        logger.info(f"Sending Auto-Reply: {reply_text}")
+        
+        return WebhookResponse(status="ok", message=reply_text)
+        # -----------------------------
 
     except Exception as e:
         logger.error(f"Error processing webhook: {e}")

@@ -13,12 +13,12 @@ class ChatInfo(BaseModel):
 class WebhookPayload(BaseModel):
     type: str
     device_id: str
-    package: str
+    package: Optional[str] = None
     platform: str
     user_info: Optional[UserInfo] = None
     chat: Optional[ChatInfo] = None
     content: str  # Base64 encoded
-    time: int
+    time: Any  # Allow int or date string
     is_group: bool = False
 
 class WebhookResponse(BaseModel):
