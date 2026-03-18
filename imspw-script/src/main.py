@@ -14,6 +14,11 @@ _DEDUP_SECONDS = 10
 _dedup_cache: dict = {}
 _dedup_lock = threading.Lock()
 
+# Recent replies: (device_id, platform, chat_uuid, content_hash) -> timestamp. Prevent reply loops.
+_recent_replies: dict = {}
+_recent_replies_lock = threading.Lock()
+_recent_replies_TTL = 120  # seconds
+
 # Load environment variables
 load_dotenv()
 
@@ -107,25 +112,34 @@ def message_processor(msg_queue: queue.Queue, processor_client: ProcessorClient)
     Uses processor queue (add_task) - lock ensures one reply at a time, queue handles ordering.
     """
     logger.info("[*] Message Processor Started")
-    
+
     while True:
         try:
             item = msg_queue.get()
             if item is None:
                 break
-            
+
             payload = item.get("payload", {})
             device_id = item.get("device_id")
             package = item.get("package")
-             
+
             if payload.get("type") == "INCOMING":
                 user_info = payload.get("user_info", {})
                 chat = payload.get("chat", {})
                 content = payload.get("content", "")
                 username = user_info.get("username", "") or user_info.get("phone", "")
                 is_group = payload.get("is_group", False)
+                media_type = payload.get("media_type", "")
+                media_url = payload.get("media_url", "")
+                
+                # Check if this is an image message
+                is_incoming_image = (media_type == "image") or (media_url and media_url.strip() != "")
+                
                 try:
-                    display_content = base64.b64decode(content).decode("utf-8") if content else "(empty)"
+                    if is_incoming_image:
+                        display_content = f"[Image] {media_url[:50] if media_url else ''}"
+                    else:
+                        display_content = base64.b64decode(content).decode("utf-8") if content else "(empty)"
                 except Exception:
                     display_content = str(content)[:80] + ("..." if len(str(content)) > 80 else "")
                 display_content = display_content.replace("\n", " ").replace("\r", " ").strip()
@@ -149,41 +163,98 @@ def message_processor(msg_queue: queue.Queue, processor_client: ProcessorClient)
                 except Exception as e:
                     logger.debug(f"[contact_core] save skipped: {e}")
 
-                print(f"[INCOMING] {package} | {username}: {display_content[:80]}{'...' if len(display_content) > 80 else ''}")
-                
+                if is_incoming_image:
+                    print(f"[INCOMING IMAGE] {package} | {username}: {media_url[:60]}{'...' if len(media_url or '') > 60 else ''}")
+                else:
+                    print(f"[INCOMING] {package} | {username}: {display_content[:80]}{'...' if len(display_content) > 80 else ''}")
+
                 payload["platform"] = get_platform_name(package)
                 payload["service"] = os.getenv("service_name")
                 payload["device_id"] = device_id
 
                 # Send to processor
                 resp = processor_client.send_message(payload)
-                
-                if resp and resp.get("message"):
-                    reply_msg = resp["message"]
+
+                if resp:
+                    reply_msg = resp.get("message")
+                    reply_image = resp.get("image")
+                    
+                    # Skip if no reply (backend may have skipped due to loop prevention)
+                    if not reply_msg and not reply_image:
+                        logger.debug(f"[{device_id}] [Reply skipped] Backend returned no reply")
+                        continue
+
+                    # Auto-reply with image for incoming images (if no explicit reply_image, use default)
+                    auto_reply_image_for_images = os.getenv("AUTO_REPLY_IMAGE_FOR_IMAGES", "0").lower() in ("1", "true", "yes")
+                    default_reply_image_url = os.getenv("DEFAULT_REPLY_IMAGE_URL", "")
+
+                    if is_incoming_image and auto_reply_image_for_images and not reply_image and default_reply_image_url:
+                        reply_image = default_reply_image_url
+                        if not reply_msg:
+                            reply_msg = resp.get("image_caption", "Thanks for the image!")
+
                     proc = get_device_processor(device_id)
                     proc.start()
-                    
+
                     if package == "com.whatsapp":
-                        if is_group:
-                            group_name = chat.get("name") or username
-                            proc.add_task("REPLY_WHATSAPP_GROUP", {"group_name": group_name, "message": reply_msg})
-                        else:
-                            phone = user_info.get("phone", "")
-                            proc.add_task("REPLY_WHATSAPP", {"phone": phone, "message": reply_msg})
-                        logger.info(f"[{device_id}] [Reply queued] WhatsApp: {reply_msg[:50]}...")
+                        target = chat.get("name") or username
+                        phone = user_info.get("phone", "")
+
+                        if reply_image:
+                            proc.add_task("REPLY_WHATSAPP_IMAGE", {
+                                "target": target,
+                                "phone": phone,
+                                "image_url": reply_image,
+                                "caption": reply_msg or ""
+                            })
+                            logger.info(f"[{device_id}] [Image reply queued] WhatsApp: {reply_image}")
+                        elif reply_msg:
+                            if is_group:
+                                proc.add_task("REPLY_WHATSAPP_GROUP", {"group_name": target, "message": reply_msg})
+                            else:
+                                proc.add_task("REPLY_WHATSAPP", {"phone": phone, "message": reply_msg})
+                            logger.info(f"[{device_id}] [Reply queued] WhatsApp: {reply_msg[:50]}...")
                     elif package == "jp.naver.line.android":
                         group_name = chat.get("name") or username or chat.get("uuid", "")
                         chat_id = chat.get("uuid", "")
-                        proc.add_task("REPLY_LINE", {"group_name": group_name, "chat_id": chat_id, "message": reply_msg})
-                        logger.info(f"[{device_id}] [Reply queued] LINE: {reply_msg[:50]}...")
+
+                        if reply_image:
+                            proc.add_task("REPLY_LINE_IMAGE", {
+                                "group_name": group_name,
+                                "chat_id": chat_id,
+                                "image_url": reply_image,
+                                "caption": reply_msg or ""
+                            })
+                            logger.info(f"[{device_id}] [Image reply queued] LINE: {reply_image}")
+                        elif reply_msg:
+                            proc.add_task("REPLY_LINE", {"group_name": group_name, "chat_id": chat_id, "message": reply_msg})
+                            logger.info(f"[{device_id}] [Reply queued] LINE: {reply_msg[:50]}...")
                     elif package == "com.facebook.orca":
                         thread_id = chat.get("uuid") or user_info.get("uuid", "")
-                        proc.add_task("REPLY_MESSENGER", {"group_name": thread_id, "message": reply_msg})
-                        logger.info(f"[{device_id}] [Reply queued] Messenger: {reply_msg[:50]}...")
+
+                        if reply_image:
+                            proc.add_task("REPLY_MESSENGER_IMAGE", {
+                                "group_name": thread_id,
+                                "image_url": reply_image,
+                                "caption": reply_msg or ""
+                            })
+                            logger.info(f"[{device_id}] [Image reply queued] Messenger: {reply_image}")
+                        elif reply_msg:
+                            proc.add_task("REPLY_MESSENGER", {"group_name": thread_id, "message": reply_msg})
+                            logger.info(f"[{device_id}] [Reply queued] Messenger: {reply_msg[:50]}...")
                     elif package == "org.telegram.messenger":
                         chat_uuid = chat.get("uuid") or user_info.get("uuid", "")
-                        proc.add_task("REPLY_TELEGRAM", {"entity": chat_uuid, "message": reply_msg})
-                        logger.info(f"[{device_id}] [Reply queued] Telegram: {reply_msg[:50]}...")
+
+                        if reply_image:
+                            proc.add_task("REPLY_TELEGRAM_IMAGE", {
+                                "entity": chat_uuid,
+                                "image_url": reply_image,
+                                "caption": reply_msg or ""
+                            })
+                            logger.info(f"[{device_id}] [Image reply queued] Telegram: {reply_image}")
+                        elif reply_msg:
+                            proc.add_task("REPLY_TELEGRAM", {"entity": chat_uuid, "message": reply_msg})
+                            logger.info(f"[{device_id}] [Reply queued] Telegram: {reply_msg[:50]}...")
                     else:
                         logger.warning(f"Unknown package {package} for reply")
 
@@ -191,6 +262,26 @@ def message_processor(msg_queue: queue.Queue, processor_client: ProcessorClient)
             logger.error(f"Error in message processor: {e}")
         finally:
             msg_queue.task_done()
+
+import requests
+
+def download_and_push_image(device_id: str, image_url: str) -> Optional[str]:
+    """Downloads an image from a URL and pushes it to the device's temporary storage."""
+    try:
+        response = requests.get(image_url, timeout=15)
+        if response.status_code == 200:
+            local_tmp = os.path.join(project_root, "tmp_reply_image.jpg")
+            with open(local_tmp, "wb") as f:
+                f.write(response.content)
+            
+            # Push to phone
+            device = u2.connect(device_id)
+            remote_path = "/sdcard/Download/tmp_reply_image.jpg"
+            device.push(local_tmp, remote_path)
+            return remote_path
+    except Exception as e:
+        logger.error(f"Failed to download/push image: {e}")
+    return None
 
 def main():
     config = AppConfig()
@@ -247,6 +338,18 @@ def main():
         proc.register_handler("REPLY_LINE", lambda p: line_service.send_message(
             frida_device_id, p.get("group_name", ""), p.get("message", ""), chat_id=p.get("chat_id")
         ))
+        
+        def handle_line_image(p):
+            remote_path = download_and_push_image(frida_device_id, p.get("image_url"))
+            if remote_path:
+                line_service.send_image(
+                    frida_device_id, 
+                    p.get("group_name", ""), 
+                    remote_path, 
+                    p.get("caption", "")
+                )
+        proc.register_handler("REPLY_LINE_IMAGE", handle_line_image)
+
         threading.Thread(
             target=run_line_monitor,
             args=(frida_device_id, incoming_queue, line_stop),
@@ -260,6 +363,18 @@ def main():
         proc.register_handler("REPLY_MESSENGER", lambda p: messenger_service.send_message(
             frida_device_id, p.get("group_name", ""), p.get("message", "")
         ))
+        
+        def handle_messenger_image(p):
+            remote_path = download_and_push_image(frida_device_id, p.get("image_url"))
+            if remote_path:
+                messenger_service.send_image(
+                    frida_device_id, 
+                    p.get("group_name", ""), 
+                    remote_path, 
+                    p.get("caption", "")
+                )
+        proc.register_handler("REPLY_MESSENGER_IMAGE", handle_messenger_image)
+
         mon_thread = threading.Thread(
             target=run_messenger_monitor,
             args=(frida_device_id, incoming_queue, messenger_stop),
@@ -274,6 +389,21 @@ def main():
         proc.register_handler("REPLY_TELEGRAM", lambda p: telegram_service.send_message(
             p.get("entity", ""), p.get("message", "")
         ))
+
+        def handle_tg_image(p):
+            # For Telegram, we don't need to push to phone, just download locally
+            try:
+                response = requests.get(p.get("image_url"), timeout=15)
+                if response.status_code == 200:
+                    local_path = os.path.join(project_root, f"tg_reply_{int(time.time())}.jpg")
+                    with open(local_path, "wb") as f:
+                        f.write(response.content)
+                    telegram_service.send_image(p.get("entity"), local_path, caption=p.get("caption", ""))
+                    os.unlink(local_path)
+            except Exception as e:
+                logger.error(f"Failed to send Telegram image: {e}")
+        proc.register_handler("REPLY_TELEGRAM_IMAGE", handle_tg_image)
+
         threading.Thread(
             target=run_telegram_monitor,
             args=(frida_device_id, incoming_queue, telegram_stop),
@@ -281,6 +411,25 @@ def main():
             name="TelegramMonitor",
         ).start()
         logger.info("[*] Telegram MTProto Monitor started")
+
+    # WhatsApp Reply Handlers
+    if "com.whatsapp" in package_list:
+        proc.register_handler("REPLY_WHATSAPP", lambda p: whatsapp_service.send_message(
+            frida_device_id, p.get("phone", ""), p.get("message", "")
+        ))
+        proc.register_handler("REPLY_WHATSAPP_GROUP", lambda p: whatsapp_service.send_message(
+            frida_device_id, p.get("group_name", ""), p.get("message", "")
+        ))
+        def handle_wa_image(p):
+            remote_path = download_and_push_image(frida_device_id, p.get("image_url"))
+            if remote_path:
+                whatsapp_service.send_image(
+                    frida_device_id, 
+                    p.get("target") or p.get("phone"), 
+                    remote_path, 
+                    p.get("caption", "")
+                )
+        proc.register_handler("REPLY_WHATSAPP_IMAGE", handle_wa_image)
 
     # Create group: runs in background thread per device_id (callback_server), not via processor queue
 

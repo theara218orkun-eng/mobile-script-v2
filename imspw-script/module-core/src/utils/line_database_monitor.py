@@ -344,8 +344,16 @@ def _poll_fts_once(
                 from services.line_service import was_just_sent
                 if was_just_sent(device_id, chat_id, content):
                     skip_reason["was_just_sent"] = skip_reason.get("was_just_sent", 0) + 1
+                    if LINE_DEBUG:
+                        logger.info(f"[{device_id}] [LineMonitor] Skipping message - was just sent by bot: {content[:50]}")
                     continue
-            except Exception:
+                else:
+                    # Log that we checked but it's not a recent send (good for troubleshooting)
+                    if LINE_DEBUG:
+                        logger.debug(f"[{device_id}] [LineMonitor] Message not in recent-sent cache, processing: {content[:50]}")
+            except Exception as e:
+                if LINE_DEBUG:
+                    logger.warning(f"[{device_id}] [LineMonitor] was_just_sent check failed: {e}")
                 pass
             # Content dedup: skip if we emitted same chat+content recently (device reconnect / FTS rebuild)
             content_hash = hashlib.sha256((content or "").encode()).hexdigest()[:16]

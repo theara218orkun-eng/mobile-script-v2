@@ -106,7 +106,10 @@ export function init(db, initialValues) {
 	try {
 		let messageType = initialValues.getAsInteger("message_type");
 		let content = initialValues.getAsString("text_data");
+		let mediaUrl = initialValues.getAsString("media_url");
+		let mediaType = initialValues.getAsString("media_type");
 
+		// Text message (type 0 or null)
 		if (content && (messageType === null || messageType.intValue() === 0)) {
 			let fromMe = initialValues.getAsInteger("from_me");
 			let timestamp = initialValues.getAsLong("timestamp");
@@ -148,6 +151,66 @@ export function init(db, initialValues) {
 					phone: senderInfo.phone
 				},
 				content: encodedContent,
+				time: dateStr,
+			};
+		}
+
+		// Image message (type 1 = image, or has media_url with image type)
+		let isImageMessage = (messageType && messageType.intValue() === 1) || 
+			(mediaUrl && mediaUrl.length > 0 && (!mediaType || mediaType.startsWith("image")));
+		
+		if (isImageMessage && mediaUrl && mediaUrl.length > 0) {
+			let fromMe = initialValues.getAsInteger("from_me");
+			let timestamp = initialValues.getAsLong("timestamp");
+			let chatRowId = initialValues.getAsLong("chat_row_id");
+			let senderJidRowId = initialValues.getAsLong("sender_jid_row_id");
+
+			let type = (fromMe && fromMe.intValue() === 1) ? "OUTGOING" : "INCOMING";
+			let dateStr = new Date(timestamp ? timestamp.longValue() : Date.now()).toLocaleString();
+
+			let chatInfo = resolveJidInfo(db, chatRowId, "chat");
+
+			let senderInfo = chatInfo;
+			if (senderJidRowId && senderJidRowId.longValue() !== -1 && senderJidRowId.longValue() !== 0) {
+				console.log("[WA Listener] Resolving Sender JID Row: " + senderJidRowId.toString());
+				let explicitSender = resolveJidInfo(db, senderJidRowId, "person");
+				if (explicitSender && explicitSender.uuid) {
+					senderInfo = explicitSender;
+				} else {
+					console.log("[WA Listener] Failed to resolve sender info for row " + senderJidRowId + ", falling back to chat info.");
+				}
+			} else {
+				console.log("[WA Listener] No valid sender_jid_row_id (" + senderJidRowId + "), using chat info.");
+			}
+
+			// Encode media URL as content (processor will use it for image reply)
+			let javaString = Java.use("java.lang.String").$new(mediaUrl.toString());
+			let encodedContent = Base64.encodeToString(javaString.getBytes("UTF-8"), 2);
+
+			let caption = initialValues.getAsString("caption") || "";
+			let encodedCaption = caption ? Base64.encodeToString(
+				Java.use("java.lang.String").$new(caption).getBytes("UTF-8"), 2
+			) : "";
+
+			console.log("[WA Listener] Image message detected: " + mediaUrl);
+
+			return {
+				type: type,
+				is_group: chatInfo.type === "group",
+				chat: {
+					uuid: chatInfo.uuid,
+					name: chatInfo.username,
+					type: chatInfo.type
+				},
+				user_info: {
+					uuid: senderInfo.uuid,
+					username: senderInfo.username,
+					phone: senderInfo.phone
+				},
+				content: encodedContent,
+				caption: encodedCaption,
+				media_type: "image",
+				media_url: mediaUrl,
 				time: dateStr,
 			};
 		}

@@ -351,7 +351,7 @@ class WhatsAppService(IMService):
                 time.sleep(0.5)
                 entry_field.set_text(message)
                 time.sleep(0.5)
-                
+
                 # Retry finding send button (sometimes keyboard hides it)
                 for _ in range(3):
                     send_btn = d(resourceId=f"{self.package_name}:id/send")
@@ -361,9 +361,9 @@ class WhatsAppService(IMService):
                         return True
                     time.sleep(1)
                     # Attempt to hide keyboard if blocking
-                    d.press("back") 
+                    d.press("back")
                     time.sleep(0.5)
-                
+
                 logger.warning(f"Send button not found after retries. Message: {message[:10]}...")
                 return False
             else:
@@ -371,6 +371,110 @@ class WhatsAppService(IMService):
                 return False
         except Exception as e:
             logger.error(f"Error in _send_text: {e}")
+            return False
+
+    def send_image(self, device_ip: str, target: str, image_path: str, caption: str = "", d=None):
+        """
+        Sends an image to a WhatsApp contact or group.
+        target: phone number or group name
+        image_path: path to image on device (e.g. /sdcard/Download/tmp.jpg)
+        caption: optional caption
+        """
+        if d is None:
+            d = self.connect_device(device_ip)
+
+        logger.info(f"[{device_ip}] [WhatsAppService] Sending image '{image_path}' to '{target}'")
+
+        try:
+            d.app_start(self.package_name, stop=True)
+            time.sleep(5)
+
+            self._search_chat(d, target)
+            time.sleep(1)
+
+            if self._send_image(d, image_path, caption):
+                logger.info(f"[{device_ip}] [WhatsAppService] Image sent to '{target}'")
+            else:
+                logger.error(f"[{device_ip}] Failed to send image to '{target}'")
+
+        except Exception as e:
+            logger.error(f"[{device_ip}] Error in send_image: {e}")
+        finally:
+            d.app_start("jp.naver.line.android", stop=False)
+
+    def _send_image(self, d, image_path: str, caption: str = "") -> bool:
+        """Helper to send an image via UI automation."""
+        try:
+            # Click attachment/camera button
+            attach_btn = d(resourceId=f"{self.package_name}:id/attach_button")
+            if not attach_btn.exists:
+                attach_btn = d(description="Attach")
+            if not attach_btn.exists:
+                # Try camera button
+                attach_btn = d(resourceId=f"{self.package_name}:id/camera_button")
+            
+            if not attach_btn.exists:
+                logger.warning("Attach button not found")
+                return False
+
+            attach_btn.click()
+            time.sleep(1)
+
+            # Click Gallery/Document option
+            gallery_btn = d(text="Gallery")
+            if not gallery_btn.exists:
+                gallery_btn = d(text="Image")
+            if not gallery_btn.exists:
+                gallery_btn = d(description="Gallery")
+            if not gallery_btn.exists:
+                # Try document option
+                gallery_btn = d(text="Document")
+            
+            if gallery_btn.exists:
+                gallery_btn.click()
+            else:
+                logger.warning("Gallery button not found")
+                return False
+            
+            time.sleep(2)
+
+            # Select image from gallery - click first image
+            first_image = d(className="android.widget.ImageView")
+            if first_image.exists:
+                first_image.click()
+                time.sleep(1)
+            else:
+                logger.warning("No images found in gallery")
+                # Try to find by description
+                image_item = d(descriptionContains="Image")
+                if image_item.exists:
+                    image_item.click()
+                    time.sleep(1)
+                else:
+                    return False
+
+            # Add caption if provided
+            if caption:
+                caption_input = d(className="android.widget.EditText")
+                if caption_input.exists:
+                    caption_input.set_text(caption)
+                    time.sleep(0.5)
+
+            # Click Send
+            send_btn = d(resourceId=f"{self.package_name}:id/send")
+            if not send_btn.exists:
+                send_btn = d(description="Send")
+            
+            if send_btn.exists:
+                send_btn.click()
+                time.sleep(1)
+                return True
+            
+            logger.warning("Send button not found for image")
+            return False
+
+        except Exception as e:
+            logger.error(f"Error in _send_image: {e}")
             return False
 
 whatsapp_service = WhatsAppService()

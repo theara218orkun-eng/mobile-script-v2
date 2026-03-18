@@ -161,34 +161,131 @@ class LineService(IMService):
         message_input = d(resourceId=f"{self.package_name}:id/chathistory_message_edit")
         if not message_input.exists:
             message_input = d(className="android.widget.EditText")
-        
+
         if message_input.wait(timeout=5):
             message_input.set_text(text)
             time.sleep(1)
             # Check for send button (icon or text)
             # 1. Try resource ID (icon)
             send_btn = d(resourceId=f"{self.package_name}:id/send_button_icon")
-            
+
             # 2. Try description (accessibility text)
             if not send_btn.exists:
                 send_btn = d(description="Send")
-                
+
             # 3. Try text "Send" (rare in mobile app, but possible)
             if not send_btn.exists:
                 send_btn = d(text="Send")
-            
+
             # If not immediately visible, wait a bit (animating or enabled state)
             if not send_btn.exists:
-                time.sleep(1) 
-                
+                time.sleep(1)
+
             if send_btn.exists:
                 send_btn.click()
                 return True
-            
+
             logger.warning("Send button (icon/text) not found.")
             return False
-            
+
         return False
+
+    def send_image(self, device_ip: str, group_name: str, image_path: str, caption: str = "", d=None, chat_id: Optional[str] = None):
+        """
+        Sends an image to a LINE group (or user).
+        image_path: path to image on device (e.g. /sdcard/Download/tmp.jpg)
+        caption: optional text caption
+        chat_id: used for record_sent dedup. If None, uses group_name.
+        """
+        if d is None:
+            d = self.connect_device(device_ip)
+
+        dedup_key = chat_id or group_name
+        logger.info(f"[{device_ip}] [LineService] Sending image '{image_path}' to '{group_name}'")
+
+        try:
+            d.app_start(self.package_name, stop=True)
+            time.sleep(5)  # Wait for cold start
+
+            if self._navigate_to_chat(d, group_name):
+                time.sleep(1)
+                if self._send_image(d, image_path, caption):
+                    record_sent(device_ip, dedup_key, f"[IMAGE:{image_path}]")
+                    logger.info(f"[{device_ip}] [LineService] Image sent to '{group_name}'")
+                else:
+                    logger.error(f"[{device_ip}] Failed to send image to '{group_name}'")
+            else:
+                logger.error(f"[{device_ip}] Failed to navigate to chat '{group_name}'")
+
+        except Exception as e:
+            logger.error(f"[{device_ip}] Error in send_image: {e}")
+        finally:
+            logger.info(f"[{device_ip}] Bringing LINE to foreground...")
+            d.app_start(self.package_name, stop=False)
+
+    def _send_image(self, d, image_path: str, caption: str = "") -> bool:
+        """Helper to send an image via UI automation."""
+        try:
+            # Click attachment/gallery button
+            attach_btn = d(resourceId=f"{self.package_name}:id/message_attach_button")
+            if not attach_btn.exists:
+                attach_btn = d(description="Attach")
+            
+            if not attach_btn.exists:
+                logger.warning("Attach button not found")
+                return False
+
+            attach_btn.click()
+            time.sleep(1)
+
+            # Click Gallery/Image option
+            gallery_btn = d(text="Gallery")
+            if not gallery_btn.exists:
+                gallery_btn = d(text="Image")
+            if not gallery_btn.exists:
+                gallery_btn = d(description="Gallery")
+            
+            if gallery_btn.exists:
+                gallery_btn.click()
+            else:
+                # Try clicking first image option directly
+                pass
+            
+            time.sleep(2)
+
+            # Select image from gallery - click the image we pushed
+            # For now, click first image in gallery
+            first_image = d(className="android.widget.ImageView")
+            if first_image.exists:
+                first_image.click()
+                time.sleep(1)
+            else:
+                logger.warning("No images found in gallery")
+                return False
+
+            # Add caption if provided
+            if caption:
+                caption_input = d(className="android.widget.EditText")
+                if caption_input.exists:
+                    caption_input.set_text(caption)
+                    time.sleep(0.5)
+
+            # Click Send
+            send_btn = d(resourceId=f"{self.package_name}:id/send_button_icon")
+            if not send_btn.exists:
+                send_btn = d(description="Send")
+            
+            if send_btn.exists:
+                send_btn.click()
+                time.sleep(1)
+                return True
+            
+            logger.warning("Send button not found for image")
+            return False
+
+        except Exception as e:
+            logger.error(f"Error in _send_image: {e}")
+            return False
 
     def send_messages_to_groups(self, device_ip: str, group_names: list[str], messages: list[str]):
         pass
