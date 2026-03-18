@@ -46,11 +46,23 @@ class WhatsAppService(IMService):
         logger.info(f"[{device_ip}] [WhatsAppService] Sending to group '{group_name}'")
         d.app_start(self.package_name, stop=True)
         time.sleep(10)
-        
+
         self._search_chat(d, group_name)
-        self._send_text(d, message)
-        logger.info(f"[{device_ip}] [WhatsAppService] Message sent to '{group_name}'")
-        d.app_start("jp.naver.line.android", stop=False)  # Switch to LINE after send
+        time.sleep(2)  # Wait for chat to open
+        
+        # Verify we're in chat
+        if not d(resourceId=f"{self.package_name}:id/entry").exists:
+            logger.error(f"[{device_ip}] Not in chat view")
+            d.app_start("jp.naver.line.android", stop=False)
+            return
+        
+        success = self._send_text(d, message)
+        if success:
+            logger.info(f"[{device_ip}] [WhatsAppService] Message sent to '{group_name}'")
+        else:
+            logger.error(f"[{device_ip}] [WhatsAppService] Failed to send to '{group_name}'")
+        # Don't switch to LINE - stay in WhatsApp for emulator
+        # d.app_start("jp.naver.line.android", stop=False)
 
     def send_messages(self, device_ip: str, group_name: str, messages: list[str], d=None):
         """
@@ -74,7 +86,8 @@ class WhatsAppService(IMService):
                 time.sleep(1)
             
         logger.info(f"[{device_ip}] [WhatsAppService] Bulk messages sent to '{group_name}'")
-        d.app_start("jp.naver.line.android", stop=False)  # Switch to LINE after send
+        # Don't switch to LINE - stay in WhatsApp for emulator
+        # d.app_start("jp.naver.line.android", stop=False)
 
     def send_messages_to_groups(self, device_ip: str, group_names: list[str], messages: list[str], d=None):
         """
@@ -345,27 +358,54 @@ class WhatsAppService(IMService):
     def _send_text(self, d, message: str):
         """Helper to type and send text in an open chat."""
         try:
+            # Find message input field
             entry_field = d(resourceId=f"{self.package_name}:id/entry")
+            if not entry_field.exists:
+                # Fallback: try description
+                entry_field = d(description="Message")
+
             if entry_field.exists:
+                # Clear any existing text first
                 entry_field.click()
                 time.sleep(0.5)
+
+                # Set the message
                 entry_field.set_text(message)
-                time.sleep(0.5)
+                time.sleep(1)  # Wait for text to be entered
 
-                # Retry finding send button (sometimes keyboard hides it)
-                for _ in range(3):
-                    send_btn = d(resourceId=f"{self.package_name}:id/send")
-                    if send_btn.exists:
-                        send_btn.click()
-                        time.sleep(0.5)
-                        return True
-                    time.sleep(1)
-                    # Attempt to hide keyboard if blocking
-                    d.press("back")
-                    time.sleep(0.5)
+                # Find and click send button - try multiple methods
+                send_btn = None
 
-                logger.warning(f"Send button not found after retries. Message: {message[:10]}...")
-                return False
+                # Method 1: By resource ID
+                send_btn = d(resourceId=f"{self.package_name}:id/send")
+
+                # Method 2: By description
+                if not send_btn.exists:
+                    send_btn = d(description="Send")
+
+                # Method 3: By content description containing "send"
+                if not send_btn.exists:
+                    send_btn = d(descriptionContains="Send")
+
+                # Method 4: Try className with send description
+                if not send_btn.exists:
+                    send_btn = d(className="android.widget.ImageButton", description="Send")
+
+                if send_btn.exists:
+                    send_btn.click()
+                    time.sleep(1)  # Wait for send to complete
+                    logger.info(f"Message sent successfully")
+                    return True
+                else:
+                    logger.warning(f"Send button not found. Available buttons:")
+                    # Debug: log what buttons are available
+                    try:
+                        buttons = d(className="android.widget.ImageButton")
+                        if buttons.exists:
+                            logger.info(f"Found {buttons.count} ImageButtons")
+                    except:
+                        pass
+                    return False
             else:
                 logger.warning("Message entry field not found")
                 return False

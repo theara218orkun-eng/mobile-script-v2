@@ -131,9 +131,21 @@ def message_processor(msg_queue: queue.Queue, processor_client: ProcessorClient)
                 is_group = payload.get("is_group", False)
                 media_type = payload.get("media_type", "")
                 media_url = payload.get("media_url", "")
+                line_image_path = payload.get("line_image_path", "")  # LINE specific
                 
                 # Check if this is an image message
                 is_incoming_image = (media_type == "image") or (media_url and media_url.strip() != "")
+                
+                # Special handling for LINE images: pull from device and upload to Imgur
+                if is_incoming_image and package == "jp.naver.line.android" and line_image_path:
+                    logger.info(f"[{device_id}] [LINE Image] Found image at {line_image_path}, uploading...")
+                    imgur_url = pull_and_upload_line_image(device_id, line_image_path)
+                    if imgur_url:
+                        logger.info(f"[{device_id}] [LINE Image] Uploaded to Imgur: {imgur_url}")
+                        media_url = imgur_url  # Replace with actual URL
+                        payload["media_url"] = imgur_url
+                    else:
+                        logger.warning(f"[{device_id}] [LINE Image] Failed to upload, using placeholder")
                 
                 try:
                     if is_incoming_image:
@@ -178,6 +190,8 @@ def message_processor(msg_queue: queue.Queue, processor_client: ProcessorClient)
                 if resp:
                     reply_msg = resp.get("message")
                     reply_image = resp.get("image")
+                    
+                    logger.info(f"[{device_id}] [Backend Response] message={reply_msg[:50] if reply_msg else None}, image={reply_image}")
                     
                     # Skip if no reply (backend may have skipped due to loop prevention)
                     if not reply_msg and not reply_image:
@@ -273,7 +287,7 @@ def download_and_push_image(device_id: str, image_url: str) -> Optional[str]:
             local_tmp = os.path.join(project_root, "tmp_reply_image.jpg")
             with open(local_tmp, "wb") as f:
                 f.write(response.content)
-            
+
             # Push to phone
             device = u2.connect(device_id)
             remote_path = "/sdcard/Download/tmp_reply_image.jpg"
@@ -282,6 +296,98 @@ def download_and_push_image(device_id: str, image_url: str) -> Optional[str]:
     except Exception as e:
         logger.error(f"Failed to download/push image: {e}")
     return None
+
+
+def pull_line_image(device_id: str, line_image_path: str) -> Optional[str]:
+    """
+    Pull LINE image from device and save locally.
+    Returns local file path or None if failed.
+    """
+    if not line_image_path:
+        return None
+    
+    try:
+        # Check if file exists on device
+        check_cmd = f"adb -s {device_id} shell su -c 'test -f \"{line_image_path}\" && echo exists'"
+        result = os.popen(check_cmd).read()
+        if "exists" not in result:
+            logger.warning(f"LINE image not found at {line_image_path}")
+            return None
+        
+        # Pull image from device
+        local_tmp = os.path.join(project_root, f"line_image_{int(time.time())}.jpg")
+        pull_cmd = f"adb -s {device_id} shell su -c 'cp \"{line_image_path}\" /sdcard/Download/line_temp.jpg'"
+        os.popen(pull_cmd).read()
+        
+        pull_cmd2 = f"adb -s {device_id} pull /sdcard/Download/line_temp.jpg \"{local_tmp}\""
+        os.popen(pull_cmd2).read()
+        
+        if os.path.exists(local_tmp) and os.path.getsize(local_tmp) > 0:
+            logger.info(f"LINE image pulled to {local_tmp}")
+            return local_tmp
+        else:
+            logger.error(f"Failed to pull LINE image from {line_image_path}")
+            try:
+                os.unlink(local_tmp)
+            except:
+                pass
+            return None
+    except Exception as e:
+        logger.error(f"Error pulling LINE image: {e}")
+        return None
+
+
+def upload_to_imgur(image_path: str) -> Optional[str]:
+    """
+    Upload image to Imgur (anonymous, no auth required for small uploads).
+    Returns public URL or None if failed.
+    """
+    try:
+        # Use imgur anonymous upload API (client ID: 3585f665dc6a8b6 - public demo key)
+        # For production, register your own app at https://api.imgur.com/oauth2/addclient
+        headers = {
+            'Authorization': 'Client-ID 3585f665dc6a8b6',
+        }
+        with open(image_path, 'rb') as f:
+            files = {'image': f}
+            response = requests.post('https://api.imgur.com/3/image', headers=headers, files=files, timeout=30)
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('success'):
+                url = data['data']['link']
+                logger.info(f"Image uploaded to Imgur: {url}")
+                return url
+        logger.warning(f"Imgur upload failed: {response.status_code} - {response.text[:200]}")
+        return None
+    except Exception as e:
+        logger.error(f"Error uploading to Imgur: {e}")
+        return None
+
+
+def pull_and_upload_line_image(device_id: str, line_image_path: str) -> Optional[str]:
+    """
+    Pull LINE image from device and upload to Imgur.
+    Returns public URL for the image.
+    """
+    if not line_image_path:
+        return None
+    
+    # Pull image from device
+    local_path = pull_line_image(device_id, line_image_path)
+    if not local_path:
+        return None
+    
+    # Upload to Imgur
+    imgur_url = upload_to_imgur(local_path)
+    
+    # Cleanup local file
+    try:
+        os.unlink(local_path)
+    except:
+        pass
+    
+    return imgur_url
 
 def main():
     config = AppConfig()
@@ -340,14 +446,20 @@ def main():
         ))
         
         def handle_line_image(p):
-            remote_path = download_and_push_image(frida_device_id, p.get("image_url"))
+            image_url = p.get("image_url")
+            caption = p.get("caption", "")
+            logger.info(f"[{frida_device_id}] [LINE Image Handler] Received task: image_url={image_url}, caption={caption}")
+            remote_path = download_and_push_image(frida_device_id, image_url)
             if remote_path:
+                logger.info(f"[{frida_device_id}] [LINE Image Handler] Image downloaded to {remote_path}, sending...")
                 line_service.send_image(
-                    frida_device_id, 
-                    p.get("group_name", ""), 
-                    remote_path, 
-                    p.get("caption", "")
+                    frida_device_id,
+                    p.get("group_name", ""),
+                    remote_path,
+                    caption
                 )
+            else:
+                logger.error(f"[{frida_device_id}] [LINE Image Handler] Failed to download image")
         proc.register_handler("REPLY_LINE_IMAGE", handle_line_image)
 
         threading.Thread(
@@ -421,14 +533,21 @@ def main():
             frida_device_id, p.get("group_name", ""), p.get("message", "")
         ))
         def handle_wa_image(p):
-            remote_path = download_and_push_image(frida_device_id, p.get("image_url"))
+            image_url = p.get("image_url")
+            caption = p.get("caption", "")
+            target = p.get("target") or p.get("phone")
+            logger.info(f"[{frida_device_id}] [WhatsApp Image Handler] Received task: target={target}, image_url={image_url}, caption={caption}")
+            remote_path = download_and_push_image(frida_device_id, image_url)
             if remote_path:
+                logger.info(f"[{frida_device_id}] [WhatsApp Image Handler] Image downloaded to {remote_path}, sending to {target}...")
                 whatsapp_service.send_image(
-                    frida_device_id, 
-                    p.get("target") or p.get("phone"), 
-                    remote_path, 
-                    p.get("caption", "")
+                    frida_device_id,
+                    target,
+                    remote_path,
+                    caption
                 )
+            else:
+                logger.error(f"[{frida_device_id}] [WhatsApp Image Handler] Failed to download image from {image_url}")
         proc.register_handler("REPLY_WHATSAPP_IMAGE", handle_wa_image)
 
     # Create group: runs in background thread per device_id (callback_server), not via processor queue
