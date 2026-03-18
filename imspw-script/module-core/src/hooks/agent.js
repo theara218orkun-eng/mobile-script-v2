@@ -15,24 +15,33 @@ function installHooks() {
 		Java.perform(function () {
 			try {
 				var SQLiteDatabase = Java.use("android.database.sqlite.SQLiteDatabase");
+				
+				// Hook insertWithOnConflict (most common)
 				SQLiteDatabase.insertWithOnConflict.overload(
 					'java.lang.String', 'java.lang.String', 'android.content.ContentValues', 'int'
 				).implementation = function (table, nullColumnHack, initialValues, conflictAlgorithm) {
 					try {
 						var dbInstance = Java.cast(this, SQLiteDatabase);
-
-						if (targetPackage === "jp.naver.line.android") {
-							const lineResult = LineMsgListener.init(dbInstance, table, initialValues);
-							if (lineResult) send(lineResult);
-						} else if (targetPackage === "com.whatsapp" || targetPackage === "com.whatsapp.w4b") {
-							const waResult = WAMsgListener.init(this, initialValues);
-							if (waResult) send(waResult);
-						}
+						handleInsert(dbInstance, table, initialValues);
 					} catch (error) {
 						console.log("[Frida] Hook Error: " + error);
 					}
 					return this.insertWithOnConflict(table, nullColumnHack, initialValues, conflictAlgorithm);
 				};
+				
+				// Hook insert (alternative method)
+				SQLiteDatabase.insert.overload(
+					'java.lang.String', 'java.lang.String', 'android.content.ContentValues'
+				).implementation = function (table, nullColumnHack, initialValues) {
+					try {
+						var dbInstance = Java.cast(this, SQLiteDatabase);
+						handleInsert(dbInstance, table, initialValues);
+					} catch (error) {
+						console.log("[Frida] Hook Error: " + error);
+					}
+					return this.insert(table, nullColumnHack, initialValues);
+				};
+				
 				hooksInstalled = true;
 				console.log("[Frida] Hooks installed for " + targetPackage);
 			} catch (e) {
@@ -40,6 +49,20 @@ function installHooks() {
 			}
 		});
 	}, 1000);
+}
+
+function handleInsert(dbInstance, table, initialValues) {
+	try {
+		if (targetPackage === "jp.naver.line.android") {
+			const lineResult = LineMsgListener.init(dbInstance, table, initialValues);
+			if (lineResult) send(lineResult);
+		} else if (targetPackage === "com.whatsapp" || targetPackage === "com.whatsapp.w4b") {
+			const waResult = WAMsgListener.init(dbInstance, initialValues);
+			if (waResult) send(waResult);
+		}
+	} catch (error) {
+		console.log("[Frida] HandleInsert Error: " + error);
+	}
 }
 
 rpc.exports = {

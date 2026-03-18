@@ -91,9 +91,15 @@ async def webhook(payload: WebhookPayload, _ = Depends(verify_token)):
             # Option 1: Return an image URL (must be publicly accessible)
             reply_image = "https://cdn.pixabay.com/photo/2015/11/16/14/43/cat-1045782_640.jpg"
             reply_text = "Thanks for the image! Here's mine:"
-            
+
             # Option 2: Just acknowledge the image
             # reply_text = f"Thanks for the image, {payload.user_info.username if payload.user_info and payload.user_info.username else 'friend'}! I received it on {payload.platform}."
+
+        # Special case: if user sends "image" text, reply with an image
+        if decoded_content and decoded_content.strip().lower() == "image":
+            reply_image = "https://cdn.pixabay.com/photo/2015/11/16/14/43/cat-1045782_640.jpg"
+            reply_text = "Here's an image for you!"
+            logger.info(f"[Special] User sent 'image', replying with image")
 
         logger.info(f"Sending Auto-Reply: {reply_text} (Image: {reply_image})")
 

@@ -426,11 +426,12 @@ class WhatsAppService(IMService):
         logger.info(f"[{device_ip}] [WhatsAppService] Sending image '{image_path}' to '{target}'")
 
         try:
-            d.app_start(self.package_name, stop=True)
-            time.sleep(5)
+            # Don't stop the app - just bring to foreground
+            d.app_start(self.package_name, stop=False)
+            time.sleep(3)
 
             self._search_chat(d, target)
-            time.sleep(1)
+            time.sleep(2)
 
             if self._send_image(d, image_path, caption):
                 logger.info(f"[{device_ip}] [WhatsAppService] Image sent to '{target}'")
@@ -439,82 +440,176 @@ class WhatsAppService(IMService):
 
         except Exception as e:
             logger.error(f"[{device_ip}] Error in send_image: {e}")
-        finally:
-            d.app_start("jp.naver.line.android", stop=False)
+        # Don't switch to LINE - stay in WhatsApp for emulator
+        # d.app_start("jp.naver.line.android", stop=False)
 
     def _send_image(self, d, image_path: str, caption: str = "") -> bool:
         """Helper to send an image via UI automation."""
         try:
-            # Click attachment/camera button
-            attach_btn = d(resourceId=f"{self.package_name}:id/attach_button")
-            if not attach_btn.exists:
-                attach_btn = d(description="Attach")
-            if not attach_btn.exists:
-                # Try camera button
-                attach_btn = d(resourceId=f"{self.package_name}:id/camera_button")
+            logger.info(f"[WhatsAppService] _send_image starting, image_path={image_path}, caption={caption}")
             
-            if not attach_btn.exists:
-                logger.warning("Attach button not found")
+            # Click attachment/camera button - try multiple selectors
+            attach_btn = None
+            
+            # Try different attachment button selectors
+            selectors = [
+                {"resourceId": f"{self.package_name}:id/attach_button"},
+                {"description": "Attach"},
+                {"description": "Attach button"},
+                {"resourceId": f"{self.package_name}:id/camera_button"},
+                {"contentDescription": "Attach"},
+            ]
+            
+            for selector in selectors:
+                try:
+                    if d(**selector).exists:
+                        attach_btn = d(**selector)
+                        logger.info(f"[WhatsAppService] Found attach button with selector: {selector}")
+                        break
+                except:
+                    continue
+            
+            if not attach_btn or not attach_btn.exists:
+                logger.warning("[WhatsAppService] Attach button not found")
+                # Log available buttons for debugging
+                try:
+                    buttons = d(className="android.widget.ImageButton")
+                    if buttons.exists:
+                        logger.info(f"[WhatsAppService] Found {buttons.count} ImageButtons")
+                except:
+                    pass
                 return False
 
             attach_btn.click()
-            time.sleep(1)
-
-            # Click Gallery/Document option
-            gallery_btn = d(text="Gallery")
-            if not gallery_btn.exists:
-                gallery_btn = d(text="Image")
-            if not gallery_btn.exists:
-                gallery_btn = d(description="Gallery")
-            if not gallery_btn.exists:
-                # Try document option
-                gallery_btn = d(text="Document")
-            
-            if gallery_btn.exists:
-                gallery_btn.click()
-            else:
-                logger.warning("Gallery button not found")
-                return False
-            
+            logger.info("[WhatsAppService] Attach button clicked")
             time.sleep(2)
 
-            # Select image from gallery - click first image
-            first_image = d(className="android.widget.ImageView")
-            if first_image.exists:
-                first_image.click()
-                time.sleep(1)
+            # Click Gallery option - try multiple selectors
+            gallery_btn = None
+            gallery_selectors = [
+                {"text": "Gallery"},
+                {"text": "Image"},
+                {"description": "Gallery"},
+                {"text": "Photos"},
+                {"text": "Photo"},
+            ]
+            
+            for selector in gallery_selectors:
+                try:
+                    if d(**selector).exists:
+                        gallery_btn = d(**selector)
+                        logger.info(f"[WhatsAppService] Found gallery button with: {selector}")
+                        break
+                except:
+                    continue
+            
+            if gallery_btn and gallery_btn.exists:
+                gallery_btn.click()
+                logger.info("[WhatsAppService] Gallery button clicked")
             else:
-                logger.warning("No images found in gallery")
-                # Try to find by description
-                image_item = d(descriptionContains="Image")
-                if image_item.exists:
-                    image_item.click()
-                    time.sleep(1)
-                else:
-                    return False
+                logger.warning("[WhatsAppService] Gallery button not found, trying swipe")
+                # Try swiping to find gallery
+                d.swipe_ext("up", scale=0.5)
+                time.sleep(1)
+            
+            time.sleep(3)  # Wait for gallery to load
+
+            # Select first image from gallery
+            logger.info("[WhatsAppService] Looking for first image in gallery...")
+            first_image = None
+            
+            # Try different image selectors
+            image_selectors = [
+                {"className": "android.widget.ImageView", "instance": 0},
+                {"descriptionContains": "Image"},
+                {"textContains": "IMG"},
+            ]
+            
+            for selector in image_selectors:
+                try:
+                    if d(**selector).exists:
+                        first_image = d(**selector)
+                        logger.info(f"[WhatsAppService] Found image with: {selector}")
+                        break
+                except:
+                    continue
+            
+            if first_image and first_image.exists:
+                first_image.click()
+                logger.info("[WhatsAppService] First image clicked")
+                time.sleep(2)
+            else:
+                logger.warning("[WhatsAppService] No image found in gallery")
+                return False
 
             # Add caption if provided
             if caption:
+                logger.info(f"[WhatsAppService] Adding caption: {caption[:50]}...")
                 caption_input = d(className="android.widget.EditText")
                 if caption_input.exists:
+                    caption_input.click()
+                    time.sleep(0.5)
                     caption_input.set_text(caption)
                     time.sleep(0.5)
 
-            # Click Send
-            send_btn = d(resourceId=f"{self.package_name}:id/send")
-            if not send_btn.exists:
-                send_btn = d(description="Send")
+            # Click Send button
+            logger.info("[WhatsAppService] Looking for send button...")
+            send_btn = None
+            send_selectors = [
+                {"resourceId": f"{self.package_name}:id/send"},
+                {"description": "Send"},
+                {"description": "Send button"},
+                {"className": "android.widget.ImageButton", "description": "Send"},
+                {"contentDescription": "Send"},
+                {"text": "Send"},
+                # Try without package prefix
+                {"resourceId": "com.whatsapp:id/send"},
+                {"resourceId": "id/send"},
+            ]
             
-            if send_btn.exists:
+            for selector in send_selectors:
+                try:
+                    if d(**selector).exists:
+                        send_btn = d(**selector)
+                        logger.info(f"[WhatsAppService] Found send button with: {selector}")
+                        break
+                except Exception as e:
+                    logger.debug(f"[WhatsAppService] Selector failed: {selector} - {e}")
+                    continue
+            
+            # If still not found, try to dump UI and find any send-like button
+            if not send_btn or not send_btn.exists:
+                logger.warning("[WhatsAppService] Send button not found with standard selectors, trying fallback...")
+                try:
+                    # Try finding by className and clicking the last one (usually send is at bottom right)
+                    send_buttons = d(className="android.widget.ImageButton")
+                    if send_buttons.exists and send_buttons.count > 0:
+                        logger.info(f"[WhatsAppService] Found {send_buttons.count} ImageButton(s), trying last one as send")
+                        send_btn = send_buttons[send_buttons.count - 1]
+                except Exception as e:
+                    logger.error(f"[WhatsAppService] Fallback failed: {e}")
+            
+            if send_btn and send_btn.exists:
                 send_btn.click()
-                time.sleep(1)
+                logger.info("[WhatsAppService] Send button clicked - image sent!")
+                time.sleep(2)
                 return True
-            
-            logger.warning("Send button not found for image")
-            return False
+            else:
+                logger.warning("[WhatsAppService] Send button not found")
+                # Dump UI for debugging
+                try:
+                    logger.info("[WhatsAppService] Dumping UI hierarchy for debugging...")
+                    ui_dump = d.dump_hierarchy()
+                    # Log only send-related parts
+                    for line in ui_dump.split('\n')[:100]:
+                        if 'send' in line.lower() or 'button' in line.lower() or 'image' in line.lower():
+                            logger.debug(f"[UI Dump] {line[:200]}")
+                except Exception as e:
+                    logger.debug(f"[WhatsAppService] Could not dump UI: {e}")
+                return False
 
         except Exception as e:
-            logger.error(f"Error in _send_image: {e}")
+            logger.error(f"[WhatsAppService] Error in _send_image: {e}")
             return False
 
 whatsapp_service = WhatsAppService()

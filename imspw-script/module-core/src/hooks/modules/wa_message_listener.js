@@ -103,11 +103,33 @@ function resolveJidInfo(db, jidRowId, jidType = "person") {
 
 export function init(db, initialValues) {
 	const Base64 = Java.use("android.util.Base64");
+	const ContentValues = Java.use("android.content.ContentValues");
 	try {
 		let messageType = initialValues.getAsInteger("message_type");
 		let content = initialValues.getAsString("text_data");
 		let mediaUrl = initialValues.getAsString("media_url");
 		let mediaType = initialValues.getAsString("media_type");
+
+		// DEBUG: Log all message details
+		console.log("[WA DEBUG] message_type=" + messageType + ", text_data=" + content + ", media_url=" + mediaUrl + ", media_type=" + mediaType);
+		
+		// Try to get ALL fields from ContentValues using reflection
+		try {
+			var map = initialValues.values;
+			var keySet = map.keySet();
+			var iter = keySet.iterator();
+			var allFields = [];
+			while (iter.hasNext()) {
+				var key = iter.next().toString();
+				var val = map.get(key);
+				var valStr = val ? val.toString() : "null";
+				if (valStr.length > 100) valStr = valStr.substring(0, 100) + "...";
+				allFields.push(key + "=" + valStr);
+			}
+			console.log("[WA DEBUG] ALL FIELDS: {" + allFields.join(", ") + "}");
+		} catch (mapErr) {
+			console.log("[WA DEBUG] Could not access values map: " + mapErr);
+		}
 
 		// Text message (type 0 or null)
 		if (content && (messageType === null || messageType.intValue() === 0)) {
@@ -156,9 +178,39 @@ export function init(db, initialValues) {
 		}
 
 		// Image message (type 1 = image, or has media_url with image type)
-		let isImageMessage = (messageType && messageType.intValue() === 1) || 
+		let isImageMessage = (messageType && messageType.intValue() === 1) ||
 			(mediaUrl && mediaUrl.length > 0 && (!mediaType || mediaType.startsWith("image")));
-		
+
+		if (isImageMessage) {
+			console.log("[WA Image] Detected image message, media_url=" + mediaUrl);
+			
+			// If mediaUrl is null, try to get it from database using row_id
+			let actualMediaUrl = mediaUrl;
+			if (!actualMediaUrl || actualMediaUrl.length === 0) {
+				try {
+					// Try to get media URL from message table using _id
+					let rowId = initialValues.getAsLong("_id");
+					if (rowId && rowId.longValue() !== 0) {
+						console.log("[WA Image] Trying to fetch media URL from DB for row_id: " + rowId);
+						let cursor = db.rawQuery("SELECT media_url FROM message WHERE _id = ?", Java.array('java.lang.Long', [rowId.longValue()]));
+						if (cursor && cursor.moveToFirst()) {
+							let dbMediaUrl = cursor.getString(0);
+							if (dbMediaUrl && dbMediaUrl.length > 0) {
+								actualMediaUrl = dbMediaUrl;
+								console.log("[WA Image] Found media URL in DB: " + actualMediaUrl);
+							}
+						}
+						if (cursor) cursor.close();
+					}
+				} catch (dbErr) {
+					console.log("[WA Image] DB query failed: " + dbErr);
+				}
+			}
+			
+			// Use the actual media URL (from DB or initialValues)
+			mediaUrl = actualMediaUrl;
+		}
+
 		if (isImageMessage && mediaUrl && mediaUrl.length > 0) {
 			let fromMe = initialValues.getAsInteger("from_me");
 			let timestamp = initialValues.getAsLong("timestamp");

@@ -1,11 +1,15 @@
 var __defProp = Object.defineProperty;
+var __returnValue = (v) => v;
+function __exportSetter(name, newValue) {
+  this[name] = __returnValue.bind(null, newValue);
+}
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, {
       get: all[name],
       enumerable: true,
       configurable: true,
-      set: (newValue) => all[name] = () => newValue
+      set: __exportSetter.bind(all, name)
     });
 };
 
@@ -66,7 +70,7 @@ class CodeAllocator {
       const { free } = this;
       const n = free.length;
       const alignMask = anyAlignment ? null : ptr(alignment - 1);
-      for (let i = 0; i !== n; i++) {
+      for (let i = 0;i !== n; i++) {
         const slice = free[i];
         const satisfiesLocation = anyLocation || this._isSliceNear(slice, spec);
         const satisfiesAlignment = anyAlignment || slice.and(alignMask).isNull();
@@ -80,7 +84,7 @@ class CodeAllocator {
   _allocatePage(spec) {
     const page = Memory.alloc(pageSize, spec);
     const { sliceSize, slicesPerPage } = this;
-    for (let i = 1; i !== slicesPerPage; i++) {
+    for (let i = 1;i !== slicesPerPage; i++) {
       const slice = page.add(i * sliceSize);
       this.free.push(slice);
     }
@@ -132,27 +136,27 @@ function EnvJvmti(handle, vm) {
   this.vm = vm;
   this.vtable = handle.readPointer();
 }
-EnvJvmti.prototype.deallocate = proxy(47, "int32", ["pointer", "pointer"], function (impl, mem) {
+EnvJvmti.prototype.deallocate = proxy(47, "int32", ["pointer", "pointer"], function(impl, mem) {
   return impl(this.handle, mem);
 });
-EnvJvmti.prototype.getLoadedClasses = proxy(78, "int32", ["pointer", "pointer", "pointer"], function (impl, classCountPtr, classesPtr) {
+EnvJvmti.prototype.getLoadedClasses = proxy(78, "int32", ["pointer", "pointer", "pointer"], function(impl, classCountPtr, classesPtr) {
   const result = impl(this.handle, classCountPtr, classesPtr);
   checkJniResult("EnvJvmti::getLoadedClasses", result);
 });
-EnvJvmti.prototype.iterateOverInstancesOfClass = proxy(112, "int32", ["pointer", "pointer", "int", "pointer", "pointer"], function (impl, klass, objectFilter, heapObjectCallback, userData) {
+EnvJvmti.prototype.iterateOverInstancesOfClass = proxy(112, "int32", ["pointer", "pointer", "int", "pointer", "pointer"], function(impl, klass, objectFilter, heapObjectCallback, userData) {
   const result = impl(this.handle, klass, objectFilter, heapObjectCallback, userData);
   checkJniResult("EnvJvmti::iterateOverInstancesOfClass", result);
 });
-EnvJvmti.prototype.getObjectsWithTags = proxy(114, "int32", ["pointer", "int", "pointer", "pointer", "pointer", "pointer"], function (impl, tagCount, tags, countPtr, objectResultPtr, tagResultPtr) {
+EnvJvmti.prototype.getObjectsWithTags = proxy(114, "int32", ["pointer", "int", "pointer", "pointer", "pointer", "pointer"], function(impl, tagCount, tags, countPtr, objectResultPtr, tagResultPtr) {
   const result = impl(this.handle, tagCount, tags, countPtr, objectResultPtr, tagResultPtr);
   checkJniResult("EnvJvmti::getObjectsWithTags", result);
 });
-EnvJvmti.prototype.addCapabilities = proxy(142, "int32", ["pointer", "pointer"], function (impl, capabilitiesPtr) {
+EnvJvmti.prototype.addCapabilities = proxy(142, "int32", ["pointer", "pointer"], function(impl, capabilitiesPtr) {
   return impl(this.handle, capabilitiesPtr);
 });
 function proxy(offset, retType, argTypes, wrapper) {
   let impl = null;
-  return function () {
+  return function() {
     if (impl === null) {
       impl = new NativeFunction(this.vtable.add((offset - 1) * pointerSize2).readPointer(), retType, argTypes, nativeFunctionOptions);
     }
@@ -166,7 +170,7 @@ function proxy(offset, retType, argTypes, wrapper) {
 function parseInstructionsAt(address, tryParse, { limit }) {
   let cursor = address;
   let prevInsn = null;
-  for (let i = 0; i !== limit; i++) {
+  for (let i = 0;i !== limit; i++) {
     const insn = Instruction.parse(cursor);
     const value = tryParse(insn, prevInsn);
     if (value !== null) {
@@ -182,7 +186,7 @@ function parseInstructionsAt(address, tryParse, { limit }) {
 function memoize(compute) {
   let value = null;
   let computed = false;
-  return function (...args) {
+  return function(...args) {
     if (!computed) {
       value = compute(...args);
       computed = true;
@@ -350,7 +354,7 @@ var nativeFunctionOptions2 = {
 };
 var cachedVtable = null;
 var globalRefs = [];
-Env.dispose = function (env) {
+Env.dispose = function(env) {
   globalRefs.forEach(env.deleteGlobalRef, env);
   globalRefs = [];
 };
@@ -366,7 +370,7 @@ function vtable(instance) {
 }
 function proxy2(offset, retType, argTypes, wrapper) {
   let impl = null;
-  return function () {
+  return function() {
     if (impl === null) {
       impl = new NativeFunction(vtable(this).add(offset * pointerSize3).readPointer(), retType, argTypes, nativeFunctionOptions2);
     }
@@ -375,15 +379,15 @@ function proxy2(offset, retType, argTypes, wrapper) {
     return wrapper.apply(this, args);
   };
 }
-Env.prototype.getVersion = proxy2(4, "int32", ["pointer"], function (impl) {
+Env.prototype.getVersion = proxy2(4, "int32", ["pointer"], function(impl) {
   return impl(this.handle);
 });
-Env.prototype.findClass = proxy2(6, "pointer", ["pointer", "pointer"], function (impl, name) {
+Env.prototype.findClass = proxy2(6, "pointer", ["pointer", "pointer"], function(impl, name) {
   const result = impl(this.handle, Memory.allocUtf8String(name));
   this.throwIfExceptionPending();
   return result;
 });
-Env.prototype.throwIfExceptionPending = function () {
+Env.prototype.throwIfExceptionPending = function() {
   const throwable = this.exceptionOccurred();
   if (throwable.isNull()) {
     return;
@@ -400,233 +404,233 @@ Env.prototype.throwIfExceptionPending = function () {
   throw error;
 };
 function makeErrorHandleDestructor(vm, handle) {
-  return function () {
+  return function() {
     vm.perform((env) => {
       env.deleteGlobalRef(handle);
     });
   };
 }
-Env.prototype.fromReflectedMethod = proxy2(7, "pointer", ["pointer", "pointer"], function (impl, method) {
+Env.prototype.fromReflectedMethod = proxy2(7, "pointer", ["pointer", "pointer"], function(impl, method) {
   return impl(this.handle, method);
 });
-Env.prototype.fromReflectedField = proxy2(8, "pointer", ["pointer", "pointer"], function (impl, method) {
+Env.prototype.fromReflectedField = proxy2(8, "pointer", ["pointer", "pointer"], function(impl, method) {
   return impl(this.handle, method);
 });
-Env.prototype.toReflectedMethod = proxy2(9, "pointer", ["pointer", "pointer", "pointer", "uint8"], function (impl, klass, methodId, isStatic) {
+Env.prototype.toReflectedMethod = proxy2(9, "pointer", ["pointer", "pointer", "pointer", "uint8"], function(impl, klass, methodId, isStatic) {
   return impl(this.handle, klass, methodId, isStatic);
 });
-Env.prototype.getSuperclass = proxy2(10, "pointer", ["pointer", "pointer"], function (impl, klass) {
+Env.prototype.getSuperclass = proxy2(10, "pointer", ["pointer", "pointer"], function(impl, klass) {
   return impl(this.handle, klass);
 });
-Env.prototype.isAssignableFrom = proxy2(11, "uint8", ["pointer", "pointer", "pointer"], function (impl, klass1, klass2) {
+Env.prototype.isAssignableFrom = proxy2(11, "uint8", ["pointer", "pointer", "pointer"], function(impl, klass1, klass2) {
   return !!impl(this.handle, klass1, klass2);
 });
-Env.prototype.toReflectedField = proxy2(12, "pointer", ["pointer", "pointer", "pointer", "uint8"], function (impl, klass, fieldId, isStatic) {
+Env.prototype.toReflectedField = proxy2(12, "pointer", ["pointer", "pointer", "pointer", "uint8"], function(impl, klass, fieldId, isStatic) {
   return impl(this.handle, klass, fieldId, isStatic);
 });
-Env.prototype.throw = proxy2(13, "int32", ["pointer", "pointer"], function (impl, obj) {
+Env.prototype.throw = proxy2(13, "int32", ["pointer", "pointer"], function(impl, obj) {
   return impl(this.handle, obj);
 });
-Env.prototype.exceptionOccurred = proxy2(15, "pointer", ["pointer"], function (impl) {
+Env.prototype.exceptionOccurred = proxy2(15, "pointer", ["pointer"], function(impl) {
   return impl(this.handle);
 });
-Env.prototype.exceptionDescribe = proxy2(16, "void", ["pointer"], function (impl) {
+Env.prototype.exceptionDescribe = proxy2(16, "void", ["pointer"], function(impl) {
   impl(this.handle);
 });
-Env.prototype.exceptionClear = proxy2(17, "void", ["pointer"], function (impl) {
+Env.prototype.exceptionClear = proxy2(17, "void", ["pointer"], function(impl) {
   impl(this.handle);
 });
-Env.prototype.pushLocalFrame = proxy2(19, "int32", ["pointer", "int32"], function (impl, capacity) {
+Env.prototype.pushLocalFrame = proxy2(19, "int32", ["pointer", "int32"], function(impl, capacity) {
   return impl(this.handle, capacity);
 });
-Env.prototype.popLocalFrame = proxy2(20, "pointer", ["pointer", "pointer"], function (impl, result) {
+Env.prototype.popLocalFrame = proxy2(20, "pointer", ["pointer", "pointer"], function(impl, result) {
   return impl(this.handle, result);
 });
-Env.prototype.newGlobalRef = proxy2(21, "pointer", ["pointer", "pointer"], function (impl, obj) {
+Env.prototype.newGlobalRef = proxy2(21, "pointer", ["pointer", "pointer"], function(impl, obj) {
   return impl(this.handle, obj);
 });
-Env.prototype.deleteGlobalRef = proxy2(22, "void", ["pointer", "pointer"], function (impl, globalRef) {
+Env.prototype.deleteGlobalRef = proxy2(22, "void", ["pointer", "pointer"], function(impl, globalRef) {
   impl(this.handle, globalRef);
 });
-Env.prototype.deleteLocalRef = proxy2(23, "void", ["pointer", "pointer"], function (impl, localRef) {
+Env.prototype.deleteLocalRef = proxy2(23, "void", ["pointer", "pointer"], function(impl, localRef) {
   impl(this.handle, localRef);
 });
-Env.prototype.isSameObject = proxy2(24, "uint8", ["pointer", "pointer", "pointer"], function (impl, ref1, ref2) {
+Env.prototype.isSameObject = proxy2(24, "uint8", ["pointer", "pointer", "pointer"], function(impl, ref1, ref2) {
   return !!impl(this.handle, ref1, ref2);
 });
-Env.prototype.newLocalRef = proxy2(25, "pointer", ["pointer", "pointer"], function (impl, obj) {
+Env.prototype.newLocalRef = proxy2(25, "pointer", ["pointer", "pointer"], function(impl, obj) {
   return impl(this.handle, obj);
 });
-Env.prototype.allocObject = proxy2(27, "pointer", ["pointer", "pointer"], function (impl, clazz) {
+Env.prototype.allocObject = proxy2(27, "pointer", ["pointer", "pointer"], function(impl, clazz) {
   return impl(this.handle, clazz);
 });
-Env.prototype.getObjectClass = proxy2(31, "pointer", ["pointer", "pointer"], function (impl, obj) {
+Env.prototype.getObjectClass = proxy2(31, "pointer", ["pointer", "pointer"], function(impl, obj) {
   return impl(this.handle, obj);
 });
-Env.prototype.isInstanceOf = proxy2(32, "uint8", ["pointer", "pointer", "pointer"], function (impl, obj, klass) {
+Env.prototype.isInstanceOf = proxy2(32, "uint8", ["pointer", "pointer", "pointer"], function(impl, obj, klass) {
   return !!impl(this.handle, obj, klass);
 });
-Env.prototype.getMethodId = proxy2(33, "pointer", ["pointer", "pointer", "pointer", "pointer"], function (impl, klass, name, sig) {
+Env.prototype.getMethodId = proxy2(33, "pointer", ["pointer", "pointer", "pointer", "pointer"], function(impl, klass, name, sig) {
   return impl(this.handle, klass, Memory.allocUtf8String(name), Memory.allocUtf8String(sig));
 });
-Env.prototype.getFieldId = proxy2(94, "pointer", ["pointer", "pointer", "pointer", "pointer"], function (impl, klass, name, sig) {
+Env.prototype.getFieldId = proxy2(94, "pointer", ["pointer", "pointer", "pointer", "pointer"], function(impl, klass, name, sig) {
   return impl(this.handle, klass, Memory.allocUtf8String(name), Memory.allocUtf8String(sig));
 });
-Env.prototype.getIntField = proxy2(100, "int32", ["pointer", "pointer", "pointer"], function (impl, obj, fieldId) {
+Env.prototype.getIntField = proxy2(100, "int32", ["pointer", "pointer", "pointer"], function(impl, obj, fieldId) {
   return impl(this.handle, obj, fieldId);
 });
-Env.prototype.getStaticMethodId = proxy2(113, "pointer", ["pointer", "pointer", "pointer", "pointer"], function (impl, klass, name, sig) {
+Env.prototype.getStaticMethodId = proxy2(113, "pointer", ["pointer", "pointer", "pointer", "pointer"], function(impl, klass, name, sig) {
   return impl(this.handle, klass, Memory.allocUtf8String(name), Memory.allocUtf8String(sig));
 });
-Env.prototype.getStaticFieldId = proxy2(144, "pointer", ["pointer", "pointer", "pointer", "pointer"], function (impl, klass, name, sig) {
+Env.prototype.getStaticFieldId = proxy2(144, "pointer", ["pointer", "pointer", "pointer", "pointer"], function(impl, klass, name, sig) {
   return impl(this.handle, klass, Memory.allocUtf8String(name), Memory.allocUtf8String(sig));
 });
-Env.prototype.getStaticIntField = proxy2(150, "int32", ["pointer", "pointer", "pointer"], function (impl, obj, fieldId) {
+Env.prototype.getStaticIntField = proxy2(150, "int32", ["pointer", "pointer", "pointer"], function(impl, obj, fieldId) {
   return impl(this.handle, obj, fieldId);
 });
-Env.prototype.getStringLength = proxy2(164, "int32", ["pointer", "pointer"], function (impl, str) {
+Env.prototype.getStringLength = proxy2(164, "int32", ["pointer", "pointer"], function(impl, str) {
   return impl(this.handle, str);
 });
-Env.prototype.getStringChars = proxy2(165, "pointer", ["pointer", "pointer", "pointer"], function (impl, str) {
+Env.prototype.getStringChars = proxy2(165, "pointer", ["pointer", "pointer", "pointer"], function(impl, str) {
   return impl(this.handle, str, NULL);
 });
-Env.prototype.releaseStringChars = proxy2(166, "void", ["pointer", "pointer", "pointer"], function (impl, str, utf) {
+Env.prototype.releaseStringChars = proxy2(166, "void", ["pointer", "pointer", "pointer"], function(impl, str, utf) {
   impl(this.handle, str, utf);
 });
-Env.prototype.newStringUtf = proxy2(167, "pointer", ["pointer", "pointer"], function (impl, str) {
+Env.prototype.newStringUtf = proxy2(167, "pointer", ["pointer", "pointer"], function(impl, str) {
   const utf = Memory.allocUtf8String(str);
   return impl(this.handle, utf);
 });
-Env.prototype.getStringUtfChars = proxy2(169, "pointer", ["pointer", "pointer", "pointer"], function (impl, str) {
+Env.prototype.getStringUtfChars = proxy2(169, "pointer", ["pointer", "pointer", "pointer"], function(impl, str) {
   return impl(this.handle, str, NULL);
 });
-Env.prototype.releaseStringUtfChars = proxy2(170, "void", ["pointer", "pointer", "pointer"], function (impl, str, utf) {
+Env.prototype.releaseStringUtfChars = proxy2(170, "void", ["pointer", "pointer", "pointer"], function(impl, str, utf) {
   impl(this.handle, str, utf);
 });
-Env.prototype.getArrayLength = proxy2(171, "int32", ["pointer", "pointer"], function (impl, array) {
+Env.prototype.getArrayLength = proxy2(171, "int32", ["pointer", "pointer"], function(impl, array) {
   return impl(this.handle, array);
 });
-Env.prototype.newObjectArray = proxy2(172, "pointer", ["pointer", "int32", "pointer", "pointer"], function (impl, length, elementClass, initialElement) {
+Env.prototype.newObjectArray = proxy2(172, "pointer", ["pointer", "int32", "pointer", "pointer"], function(impl, length, elementClass, initialElement) {
   return impl(this.handle, length, elementClass, initialElement);
 });
-Env.prototype.getObjectArrayElement = proxy2(173, "pointer", ["pointer", "pointer", "int32"], function (impl, array, index) {
+Env.prototype.getObjectArrayElement = proxy2(173, "pointer", ["pointer", "pointer", "int32"], function(impl, array, index) {
   return impl(this.handle, array, index);
 });
-Env.prototype.setObjectArrayElement = proxy2(174, "void", ["pointer", "pointer", "int32", "pointer"], function (impl, array, index, value) {
+Env.prototype.setObjectArrayElement = proxy2(174, "void", ["pointer", "pointer", "int32", "pointer"], function(impl, array, index, value) {
   impl(this.handle, array, index, value);
 });
-Env.prototype.newBooleanArray = proxy2(175, "pointer", ["pointer", "int32"], function (impl, length) {
+Env.prototype.newBooleanArray = proxy2(175, "pointer", ["pointer", "int32"], function(impl, length) {
   return impl(this.handle, length);
 });
-Env.prototype.newByteArray = proxy2(176, "pointer", ["pointer", "int32"], function (impl, length) {
+Env.prototype.newByteArray = proxy2(176, "pointer", ["pointer", "int32"], function(impl, length) {
   return impl(this.handle, length);
 });
-Env.prototype.newCharArray = proxy2(177, "pointer", ["pointer", "int32"], function (impl, length) {
+Env.prototype.newCharArray = proxy2(177, "pointer", ["pointer", "int32"], function(impl, length) {
   return impl(this.handle, length);
 });
-Env.prototype.newShortArray = proxy2(178, "pointer", ["pointer", "int32"], function (impl, length) {
+Env.prototype.newShortArray = proxy2(178, "pointer", ["pointer", "int32"], function(impl, length) {
   return impl(this.handle, length);
 });
-Env.prototype.newIntArray = proxy2(179, "pointer", ["pointer", "int32"], function (impl, length) {
+Env.prototype.newIntArray = proxy2(179, "pointer", ["pointer", "int32"], function(impl, length) {
   return impl(this.handle, length);
 });
-Env.prototype.newLongArray = proxy2(180, "pointer", ["pointer", "int32"], function (impl, length) {
+Env.prototype.newLongArray = proxy2(180, "pointer", ["pointer", "int32"], function(impl, length) {
   return impl(this.handle, length);
 });
-Env.prototype.newFloatArray = proxy2(181, "pointer", ["pointer", "int32"], function (impl, length) {
+Env.prototype.newFloatArray = proxy2(181, "pointer", ["pointer", "int32"], function(impl, length) {
   return impl(this.handle, length);
 });
-Env.prototype.newDoubleArray = proxy2(182, "pointer", ["pointer", "int32"], function (impl, length) {
+Env.prototype.newDoubleArray = proxy2(182, "pointer", ["pointer", "int32"], function(impl, length) {
   return impl(this.handle, length);
 });
-Env.prototype.getBooleanArrayElements = proxy2(183, "pointer", ["pointer", "pointer", "pointer"], function (impl, array) {
+Env.prototype.getBooleanArrayElements = proxy2(183, "pointer", ["pointer", "pointer", "pointer"], function(impl, array) {
   return impl(this.handle, array, NULL);
 });
-Env.prototype.getByteArrayElements = proxy2(184, "pointer", ["pointer", "pointer", "pointer"], function (impl, array) {
+Env.prototype.getByteArrayElements = proxy2(184, "pointer", ["pointer", "pointer", "pointer"], function(impl, array) {
   return impl(this.handle, array, NULL);
 });
-Env.prototype.getCharArrayElements = proxy2(185, "pointer", ["pointer", "pointer", "pointer"], function (impl, array) {
+Env.prototype.getCharArrayElements = proxy2(185, "pointer", ["pointer", "pointer", "pointer"], function(impl, array) {
   return impl(this.handle, array, NULL);
 });
-Env.prototype.getShortArrayElements = proxy2(186, "pointer", ["pointer", "pointer", "pointer"], function (impl, array) {
+Env.prototype.getShortArrayElements = proxy2(186, "pointer", ["pointer", "pointer", "pointer"], function(impl, array) {
   return impl(this.handle, array, NULL);
 });
-Env.prototype.getIntArrayElements = proxy2(187, "pointer", ["pointer", "pointer", "pointer"], function (impl, array) {
+Env.prototype.getIntArrayElements = proxy2(187, "pointer", ["pointer", "pointer", "pointer"], function(impl, array) {
   return impl(this.handle, array, NULL);
 });
-Env.prototype.getLongArrayElements = proxy2(188, "pointer", ["pointer", "pointer", "pointer"], function (impl, array) {
+Env.prototype.getLongArrayElements = proxy2(188, "pointer", ["pointer", "pointer", "pointer"], function(impl, array) {
   return impl(this.handle, array, NULL);
 });
-Env.prototype.getFloatArrayElements = proxy2(189, "pointer", ["pointer", "pointer", "pointer"], function (impl, array) {
+Env.prototype.getFloatArrayElements = proxy2(189, "pointer", ["pointer", "pointer", "pointer"], function(impl, array) {
   return impl(this.handle, array, NULL);
 });
-Env.prototype.getDoubleArrayElements = proxy2(190, "pointer", ["pointer", "pointer", "pointer"], function (impl, array) {
+Env.prototype.getDoubleArrayElements = proxy2(190, "pointer", ["pointer", "pointer", "pointer"], function(impl, array) {
   return impl(this.handle, array, NULL);
 });
-Env.prototype.releaseBooleanArrayElements = proxy2(191, "pointer", ["pointer", "pointer", "pointer", "int32"], function (impl, array, cArray) {
+Env.prototype.releaseBooleanArrayElements = proxy2(191, "pointer", ["pointer", "pointer", "pointer", "int32"], function(impl, array, cArray) {
   impl(this.handle, array, cArray, JNI_ABORT);
 });
-Env.prototype.releaseByteArrayElements = proxy2(192, "pointer", ["pointer", "pointer", "pointer", "int32"], function (impl, array, cArray) {
+Env.prototype.releaseByteArrayElements = proxy2(192, "pointer", ["pointer", "pointer", "pointer", "int32"], function(impl, array, cArray) {
   impl(this.handle, array, cArray, JNI_ABORT);
 });
-Env.prototype.releaseCharArrayElements = proxy2(193, "pointer", ["pointer", "pointer", "pointer", "int32"], function (impl, array, cArray) {
+Env.prototype.releaseCharArrayElements = proxy2(193, "pointer", ["pointer", "pointer", "pointer", "int32"], function(impl, array, cArray) {
   impl(this.handle, array, cArray, JNI_ABORT);
 });
-Env.prototype.releaseShortArrayElements = proxy2(194, "pointer", ["pointer", "pointer", "pointer", "int32"], function (impl, array, cArray) {
+Env.prototype.releaseShortArrayElements = proxy2(194, "pointer", ["pointer", "pointer", "pointer", "int32"], function(impl, array, cArray) {
   impl(this.handle, array, cArray, JNI_ABORT);
 });
-Env.prototype.releaseIntArrayElements = proxy2(195, "pointer", ["pointer", "pointer", "pointer", "int32"], function (impl, array, cArray) {
+Env.prototype.releaseIntArrayElements = proxy2(195, "pointer", ["pointer", "pointer", "pointer", "int32"], function(impl, array, cArray) {
   impl(this.handle, array, cArray, JNI_ABORT);
 });
-Env.prototype.releaseLongArrayElements = proxy2(196, "pointer", ["pointer", "pointer", "pointer", "int32"], function (impl, array, cArray) {
+Env.prototype.releaseLongArrayElements = proxy2(196, "pointer", ["pointer", "pointer", "pointer", "int32"], function(impl, array, cArray) {
   impl(this.handle, array, cArray, JNI_ABORT);
 });
-Env.prototype.releaseFloatArrayElements = proxy2(197, "pointer", ["pointer", "pointer", "pointer", "int32"], function (impl, array, cArray) {
+Env.prototype.releaseFloatArrayElements = proxy2(197, "pointer", ["pointer", "pointer", "pointer", "int32"], function(impl, array, cArray) {
   impl(this.handle, array, cArray, JNI_ABORT);
 });
-Env.prototype.releaseDoubleArrayElements = proxy2(198, "pointer", ["pointer", "pointer", "pointer", "int32"], function (impl, array, cArray) {
+Env.prototype.releaseDoubleArrayElements = proxy2(198, "pointer", ["pointer", "pointer", "pointer", "int32"], function(impl, array, cArray) {
   impl(this.handle, array, cArray, JNI_ABORT);
 });
-Env.prototype.getByteArrayRegion = proxy2(200, "void", ["pointer", "pointer", "int", "int", "pointer"], function (impl, array, start, length, cArray) {
+Env.prototype.getByteArrayRegion = proxy2(200, "void", ["pointer", "pointer", "int", "int", "pointer"], function(impl, array, start, length, cArray) {
   impl(this.handle, array, start, length, cArray);
 });
-Env.prototype.setBooleanArrayRegion = proxy2(207, "void", ["pointer", "pointer", "int32", "int32", "pointer"], function (impl, array, start, length, cArray) {
+Env.prototype.setBooleanArrayRegion = proxy2(207, "void", ["pointer", "pointer", "int32", "int32", "pointer"], function(impl, array, start, length, cArray) {
   impl(this.handle, array, start, length, cArray);
 });
-Env.prototype.setByteArrayRegion = proxy2(208, "void", ["pointer", "pointer", "int32", "int32", "pointer"], function (impl, array, start, length, cArray) {
+Env.prototype.setByteArrayRegion = proxy2(208, "void", ["pointer", "pointer", "int32", "int32", "pointer"], function(impl, array, start, length, cArray) {
   impl(this.handle, array, start, length, cArray);
 });
-Env.prototype.setCharArrayRegion = proxy2(209, "void", ["pointer", "pointer", "int32", "int32", "pointer"], function (impl, array, start, length, cArray) {
+Env.prototype.setCharArrayRegion = proxy2(209, "void", ["pointer", "pointer", "int32", "int32", "pointer"], function(impl, array, start, length, cArray) {
   impl(this.handle, array, start, length, cArray);
 });
-Env.prototype.setShortArrayRegion = proxy2(210, "void", ["pointer", "pointer", "int32", "int32", "pointer"], function (impl, array, start, length, cArray) {
+Env.prototype.setShortArrayRegion = proxy2(210, "void", ["pointer", "pointer", "int32", "int32", "pointer"], function(impl, array, start, length, cArray) {
   impl(this.handle, array, start, length, cArray);
 });
-Env.prototype.setIntArrayRegion = proxy2(211, "void", ["pointer", "pointer", "int32", "int32", "pointer"], function (impl, array, start, length, cArray) {
+Env.prototype.setIntArrayRegion = proxy2(211, "void", ["pointer", "pointer", "int32", "int32", "pointer"], function(impl, array, start, length, cArray) {
   impl(this.handle, array, start, length, cArray);
 });
-Env.prototype.setLongArrayRegion = proxy2(212, "void", ["pointer", "pointer", "int32", "int32", "pointer"], function (impl, array, start, length, cArray) {
+Env.prototype.setLongArrayRegion = proxy2(212, "void", ["pointer", "pointer", "int32", "int32", "pointer"], function(impl, array, start, length, cArray) {
   impl(this.handle, array, start, length, cArray);
 });
-Env.prototype.setFloatArrayRegion = proxy2(213, "void", ["pointer", "pointer", "int32", "int32", "pointer"], function (impl, array, start, length, cArray) {
+Env.prototype.setFloatArrayRegion = proxy2(213, "void", ["pointer", "pointer", "int32", "int32", "pointer"], function(impl, array, start, length, cArray) {
   impl(this.handle, array, start, length, cArray);
 });
-Env.prototype.setDoubleArrayRegion = proxy2(214, "void", ["pointer", "pointer", "int32", "int32", "pointer"], function (impl, array, start, length, cArray) {
+Env.prototype.setDoubleArrayRegion = proxy2(214, "void", ["pointer", "pointer", "int32", "int32", "pointer"], function(impl, array, start, length, cArray) {
   impl(this.handle, array, start, length, cArray);
 });
-Env.prototype.registerNatives = proxy2(215, "int32", ["pointer", "pointer", "pointer", "int32"], function (impl, klass, methods, numMethods) {
+Env.prototype.registerNatives = proxy2(215, "int32", ["pointer", "pointer", "pointer", "int32"], function(impl, klass, methods, numMethods) {
   return impl(this.handle, klass, methods, numMethods);
 });
-Env.prototype.monitorEnter = proxy2(217, "int32", ["pointer", "pointer"], function (impl, obj) {
+Env.prototype.monitorEnter = proxy2(217, "int32", ["pointer", "pointer"], function(impl, obj) {
   return impl(this.handle, obj);
 });
-Env.prototype.monitorExit = proxy2(218, "int32", ["pointer", "pointer"], function (impl, obj) {
+Env.prototype.monitorExit = proxy2(218, "int32", ["pointer", "pointer"], function(impl, obj) {
   return impl(this.handle, obj);
 });
-Env.prototype.getDirectBufferAddress = proxy2(230, "pointer", ["pointer", "pointer"], function (impl, obj) {
+Env.prototype.getDirectBufferAddress = proxy2(230, "pointer", ["pointer", "pointer"], function(impl, obj) {
   return impl(this.handle, obj);
 });
-Env.prototype.getObjectRefType = proxy2(232, "int32", ["pointer", "pointer"], function (impl, ref) {
+Env.prototype.getObjectRefType = proxy2(232, "int32", ["pointer", "pointer"], function(impl, ref) {
   return impl(this.handle, ref);
 });
 var cachedMethods = new Map;
@@ -660,52 +664,52 @@ function makeVaMethod(env, offset, retType, argTypes, options) {
 function makeNonvirtualVaMethod(env, offset, retType, argTypes, options) {
   return new NativeFunction(vtable(env).add(offset * pointerSize3).readPointer(), retType, ["pointer", "pointer", "pointer", "pointer", "..."].concat(argTypes), options);
 }
-Env.prototype.constructor = function (argTypes, options) {
+Env.prototype.constructor = function(argTypes, options) {
   return vaMethod.call(this, CALL_CONSTRUCTOR_METHOD_OFFSET, "pointer", argTypes, options);
 };
-Env.prototype.vaMethod = function (retType, argTypes, options) {
+Env.prototype.vaMethod = function(retType, argTypes, options) {
   const offset = callMethodOffset[retType];
   if (offset === undefined) {
     throw new Error("Unsupported type: " + retType);
   }
   return vaMethod.call(this, offset, retType, argTypes, options);
 };
-Env.prototype.nonvirtualVaMethod = function (retType, argTypes, options) {
+Env.prototype.nonvirtualVaMethod = function(retType, argTypes, options) {
   const offset = callNonvirtualMethodOffset[retType];
   if (offset === undefined) {
     throw new Error("Unsupported type: " + retType);
   }
   return nonvirtualVaMethod.call(this, offset, retType, argTypes, options);
 };
-Env.prototype.staticVaMethod = function (retType, argTypes, options) {
+Env.prototype.staticVaMethod = function(retType, argTypes, options) {
   const offset = callStaticMethodOffset[retType];
   if (offset === undefined) {
     throw new Error("Unsupported type: " + retType);
   }
   return vaMethod.call(this, offset, retType, argTypes, options);
 };
-Env.prototype.getField = function (fieldType) {
+Env.prototype.getField = function(fieldType) {
   const offset = getFieldOffset[fieldType];
   if (offset === undefined) {
     throw new Error("Unsupported type: " + fieldType);
   }
   return plainMethod.call(this, offset, fieldType, []);
 };
-Env.prototype.getStaticField = function (fieldType) {
+Env.prototype.getStaticField = function(fieldType) {
   const offset = getStaticFieldOffset[fieldType];
   if (offset === undefined) {
     throw new Error("Unsupported type: " + fieldType);
   }
   return plainMethod.call(this, offset, fieldType, []);
 };
-Env.prototype.setField = function (fieldType) {
+Env.prototype.setField = function(fieldType) {
   const offset = setFieldOffset[fieldType];
   if (offset === undefined) {
     throw new Error("Unsupported type: " + fieldType);
   }
   return plainMethod.call(this, offset, "void", [fieldType]);
 };
-Env.prototype.setStaticField = function (fieldType) {
+Env.prototype.setStaticField = function(fieldType) {
   const offset = setStaticFieldOffset[fieldType];
   if (offset === undefined) {
     throw new Error("Unsupported type: " + fieldType);
@@ -713,7 +717,7 @@ Env.prototype.setStaticField = function (fieldType) {
   return plainMethod.call(this, offset, "void", [fieldType]);
 };
 var javaLangClass = null;
-Env.prototype.javaLangClass = function () {
+Env.prototype.javaLangClass = function() {
   if (javaLangClass === null) {
     const handle = this.findClass("java/lang/Class");
     try {
@@ -738,7 +742,7 @@ Env.prototype.javaLangClass = function () {
   return javaLangClass;
 };
 var javaLangObject = null;
-Env.prototype.javaLangObject = function () {
+Env.prototype.javaLangObject = function() {
   if (javaLangObject === null) {
     const handle = this.findClass("java/lang/Object");
     try {
@@ -755,7 +759,7 @@ Env.prototype.javaLangObject = function () {
   return javaLangObject;
 };
 var javaLangReflectConstructor = null;
-Env.prototype.javaLangReflectConstructor = function () {
+Env.prototype.javaLangReflectConstructor = function() {
   if (javaLangReflectConstructor === null) {
     const handle = this.findClass("java/lang/reflect/Constructor");
     try {
@@ -769,7 +773,7 @@ Env.prototype.javaLangReflectConstructor = function () {
   return javaLangReflectConstructor;
 };
 var javaLangReflectMethod = null;
-Env.prototype.javaLangReflectMethod = function () {
+Env.prototype.javaLangReflectMethod = function() {
   if (javaLangReflectMethod === null) {
     const handle = this.findClass("java/lang/reflect/Method");
     try {
@@ -790,7 +794,7 @@ Env.prototype.javaLangReflectMethod = function () {
   return javaLangReflectMethod;
 };
 var javaLangReflectField = null;
-Env.prototype.javaLangReflectField = function () {
+Env.prototype.javaLangReflectField = function() {
   if (javaLangReflectField === null) {
     const handle = this.findClass("java/lang/reflect/Field");
     try {
@@ -809,7 +813,7 @@ Env.prototype.javaLangReflectField = function () {
   return javaLangReflectField;
 };
 var javaLangReflectTypeVariable = null;
-Env.prototype.javaLangReflectTypeVariable = function () {
+Env.prototype.javaLangReflectTypeVariable = function() {
   if (javaLangReflectTypeVariable === null) {
     const handle = this.findClass("java/lang/reflect/TypeVariable");
     try {
@@ -827,7 +831,7 @@ Env.prototype.javaLangReflectTypeVariable = function () {
   return javaLangReflectTypeVariable;
 };
 var javaLangReflectWildcardType = null;
-Env.prototype.javaLangReflectWildcardType = function () {
+Env.prototype.javaLangReflectWildcardType = function() {
   if (javaLangReflectWildcardType === null) {
     const handle = this.findClass("java/lang/reflect/WildcardType");
     try {
@@ -844,7 +848,7 @@ Env.prototype.javaLangReflectWildcardType = function () {
   return javaLangReflectWildcardType;
 };
 var javaLangReflectGenericArrayType = null;
-Env.prototype.javaLangReflectGenericArrayType = function () {
+Env.prototype.javaLangReflectGenericArrayType = function() {
   if (javaLangReflectGenericArrayType === null) {
     const handle = this.findClass("java/lang/reflect/GenericArrayType");
     try {
@@ -859,7 +863,7 @@ Env.prototype.javaLangReflectGenericArrayType = function () {
   return javaLangReflectGenericArrayType;
 };
 var javaLangReflectParameterizedType = null;
-Env.prototype.javaLangReflectParameterizedType = function () {
+Env.prototype.javaLangReflectParameterizedType = function() {
   if (javaLangReflectParameterizedType === null) {
     const handle = this.findClass("java/lang/reflect/ParameterizedType");
     try {
@@ -877,7 +881,7 @@ Env.prototype.javaLangReflectParameterizedType = function () {
   return javaLangReflectParameterizedType;
 };
 var javaLangString = null;
-Env.prototype.javaLangString = function () {
+Env.prototype.javaLangString = function() {
   if (javaLangString === null) {
     const handle = this.findClass("java/lang/String");
     try {
@@ -890,7 +894,7 @@ Env.prototype.javaLangString = function () {
   }
   return javaLangString;
 };
-Env.prototype.getClassName = function (classHandle) {
+Env.prototype.getClassName = function(classHandle) {
   const name = this.vaMethod("pointer", [])(this.handle, classHandle, this.javaLangClass().getName);
   try {
     return this.stringFromJni(name);
@@ -898,7 +902,7 @@ Env.prototype.getClassName = function (classHandle) {
     this.deleteLocalRef(name);
   }
 };
-Env.prototype.getObjectClassName = function (objHandle) {
+Env.prototype.getObjectClassName = function(objHandle) {
   const jklass = this.getObjectClass(objHandle);
   try {
     return this.getClassName(jklass);
@@ -906,7 +910,7 @@ Env.prototype.getObjectClassName = function (objHandle) {
     this.deleteLocalRef(jklass);
   }
 };
-Env.prototype.getActualTypeArgument = function (type) {
+Env.prototype.getActualTypeArgument = function(type) {
   const actualTypeArguments = this.vaMethod("pointer", [])(this.handle, type, this.javaLangReflectParameterizedType().getActualTypeArguments);
   this.throwIfExceptionPending();
   if (!actualTypeArguments.isNull()) {
@@ -917,7 +921,7 @@ Env.prototype.getActualTypeArgument = function (type) {
     }
   }
 };
-Env.prototype.getTypeNameFromFirstTypeElement = function (typeArray) {
+Env.prototype.getTypeNameFromFirstTypeElement = function(typeArray) {
   const length = this.getArrayLength(typeArray);
   if (length > 0) {
     const typeArgument0 = this.getObjectArrayElement(typeArray, 0);
@@ -930,7 +934,7 @@ Env.prototype.getTypeNameFromFirstTypeElement = function (typeArray) {
     return "java.lang.Object";
   }
 };
-Env.prototype.getTypeName = function (type, getGenericsInformation) {
+Env.prototype.getTypeName = function(type, getGenericsInformation) {
   const invokeObjectMethodNoArgs = this.vaMethod("pointer", []);
   if (this.isInstanceOf(type, this.javaLangClass().handle)) {
     return this.getClassName(type);
@@ -957,7 +961,7 @@ Env.prototype.getTypeName = function (type, getGenericsInformation) {
     return "java.lang.Object";
   }
 };
-Env.prototype.getArrayTypeName = function (type) {
+Env.prototype.getArrayTypeName = function(type) {
   const invokeObjectMethodNoArgs = this.vaMethod("pointer", []);
   if (this.isInstanceOf(type, this.javaLangClass().handle)) {
     return this.getClassName(type);
@@ -973,7 +977,7 @@ Env.prototype.getArrayTypeName = function (type) {
     return "[Ljava.lang.Object;";
   }
 };
-Env.prototype.stringFromJni = function (str) {
+Env.prototype.stringFromJni = function(str) {
   const utf = this.getStringChars(str);
   if (utf.isNull()) {
     throw new Error("Unable to access string");
@@ -1007,7 +1011,7 @@ function VM(api) {
     getEnv = new NativeFunction(vtable2.add(6 * pointerSize4).readPointer(), "int32", ["pointer", "pointer", "int32"], options);
   }
   this.handle = handle;
-  this.perform = function (fn) {
+  this.perform = function(fn) {
     const threadId = Process.getCurrentThreadId();
     const cachedEnv = tryGetCachedEnv(threadId);
     if (cachedEnv !== null) {
@@ -1036,21 +1040,21 @@ function VM(api) {
       }
     }
   };
-  this.attachCurrentThread = function () {
+  this.attachCurrentThread = function() {
     const envBuf = Memory.alloc(pointerSize4);
     checkJniResult("VM::AttachCurrentThread", attachCurrentThread(handle, envBuf, NULL));
     return new Env(envBuf.readPointer(), this);
   };
-  this.detachCurrentThread = function () {
+  this.detachCurrentThread = function() {
     checkJniResult("VM::DetachCurrentThread", detachCurrentThread(handle));
   };
-  this.preventDetachDueToClassLoader = function () {
+  this.preventDetachDueToClassLoader = function() {
     const threadId = Process.getCurrentThreadId();
     if (attachedThreads.has(threadId)) {
       attachedThreads.set(threadId, false);
     }
   };
-  this.getEnv = function () {
+  this.getEnv = function() {
     const cachedEnv = tryGetCachedEnv(Process.getCurrentThreadId());
     if (cachedEnv !== null) {
       return cachedEnv;
@@ -1063,21 +1067,21 @@ function VM(api) {
     checkJniResult("VM::GetEnv", result);
     return new Env(envBuf.readPointer(), this);
   };
-  this.tryGetEnv = function () {
+  this.tryGetEnv = function() {
     const cachedEnv = tryGetCachedEnv(Process.getCurrentThreadId());
     if (cachedEnv !== null) {
       return cachedEnv;
     }
     return this._tryGetEnv();
   };
-  this._tryGetEnv = function () {
+  this._tryGetEnv = function() {
     const h = this.tryGetEnvHandle(JNI_VERSION_1_6);
     if (h === null) {
       return null;
     }
     return new Env(h, this);
   };
-  this.tryGetEnvHandle = function (version) {
+  this.tryGetEnvHandle = function(version) {
     const envBuf = Memory.alloc(pointerSize4);
     const result = getEnv(handle, envBuf, version);
     if (result !== JNI_OK) {
@@ -1085,14 +1089,14 @@ function VM(api) {
     }
     return envBuf.readPointer();
   };
-  this.makeHandleDestructor = function (handle2) {
+  this.makeHandleDestructor = function(handle2) {
     return () => {
       this.perform((env) => {
         env.deleteGlobalRef(handle2);
       });
     };
   };
-  this.link = function (tid, env) {
+  this.link = function(tid, env) {
     const entry = activeEnvs.get(tid);
     if (entry === undefined) {
       activeEnvs.set(tid, [env, 1]);
@@ -1100,7 +1104,7 @@ function VM(api) {
       entry[1]++;
     }
   };
-  this.unlink = function (tid) {
+  this.unlink = function(tid) {
     const entry = activeEnvs.get(tid);
     if (entry[1] === 1) {
       activeEnvs.delete(tid);
@@ -1117,7 +1121,7 @@ function VM(api) {
   }
   initialize.call(this);
 }
-VM.dispose = function (vm) {
+VM.dispose = function(vm) {
   if (attachedThreads.get(jsThreadID) === true) {
     attachedThreads.delete(jsThreadID);
     vm.detachCurrentThread();
@@ -1242,27 +1246,27 @@ function _getApi() {
   const pending = isArt ? {
     functions: {
       JNI_GetCreatedJavaVMs: ["JNI_GetCreatedJavaVMs", "int", ["pointer", "int", "pointer"]],
-      artInterpreterToCompiledCodeBridge: function (address) {
+      artInterpreterToCompiledCodeBridge: function(address) {
         this.artInterpreterToCompiledCodeBridge = address;
       },
       _ZN3art9JavaVMExt12AddGlobalRefEPNS_6ThreadENS_6ObjPtrINS_6mirror6ObjectEEE: ["art::JavaVMExt::AddGlobalRef", "pointer", ["pointer", "pointer", "pointer"]],
       _ZN3art9JavaVMExt12AddGlobalRefEPNS_6ThreadEPNS_6mirror6ObjectE: ["art::JavaVMExt::AddGlobalRef", "pointer", ["pointer", "pointer", "pointer"]],
       _ZN3art17ReaderWriterMutex13ExclusiveLockEPNS_6ThreadE: ["art::ReaderWriterMutex::ExclusiveLock", "void", ["pointer", "pointer"]],
       _ZN3art17ReaderWriterMutex15ExclusiveUnlockEPNS_6ThreadE: ["art::ReaderWriterMutex::ExclusiveUnlock", "void", ["pointer", "pointer"]],
-      _ZN3art22IndirectReferenceTable3AddEjPNS_6mirror6ObjectE: function (address) {
+      _ZN3art22IndirectReferenceTable3AddEjPNS_6mirror6ObjectE: function(address) {
         this["art::IndirectReferenceTable::Add"] = new NativeFunction(address, "pointer", ["pointer", "uint", "pointer"], nativeFunctionOptions3);
       },
-      _ZN3art22IndirectReferenceTable3AddENS_15IRTSegmentStateENS_6ObjPtrINS_6mirror6ObjectEEE: function (address) {
+      _ZN3art22IndirectReferenceTable3AddENS_15IRTSegmentStateENS_6ObjPtrINS_6mirror6ObjectEEE: function(address) {
         this["art::IndirectReferenceTable::Add"] = new NativeFunction(address, "pointer", ["pointer", "uint", "pointer"], nativeFunctionOptions3);
       },
-      _ZN3art9JavaVMExt12DecodeGlobalEPv: function (address) {
+      _ZN3art9JavaVMExt12DecodeGlobalEPv: function(address) {
         let decodeGlobal;
         if (getAndroidApiLevel() >= 26) {
           decodeGlobal = makeCxxMethodWrapperReturningPointerByValue(address, ["pointer", "pointer"]);
         } else {
           decodeGlobal = new NativeFunction(address, "pointer", ["pointer", "pointer"], nativeFunctionOptions3);
         }
-        this["art::JavaVMExt::DecodeGlobal"] = function (vm, thread, ref) {
+        this["art::JavaVMExt::DecodeGlobal"] = function(vm, thread, ref) {
           return decodeGlobal(vm, ref);
         };
       },
@@ -1270,26 +1274,26 @@ function _getApi() {
       _ZNK3art6Thread19DecodeGlobalJObjectEP8_jobject: ["art::Thread::DecodeJObject", "pointer", ["pointer", "pointer"]],
       _ZNK3art6Thread13DecodeJObjectEP8_jobject: ["art::Thread::DecodeJObject", "pointer", ["pointer", "pointer"]],
       _ZN3art10ThreadList10SuspendAllEPKcb: ["art::ThreadList::SuspendAll", "void", ["pointer", "pointer", "bool"]],
-      _ZN3art10ThreadList10SuspendAllEv: function (address) {
+      _ZN3art10ThreadList10SuspendAllEv: function(address) {
         const suspendAll = new NativeFunction(address, "void", ["pointer"], nativeFunctionOptions3);
-        this["art::ThreadList::SuspendAll"] = function (threadList, cause, longSuspend) {
+        this["art::ThreadList::SuspendAll"] = function(threadList, cause, longSuspend) {
           return suspendAll(threadList);
         };
       },
       _ZN3art10ThreadList9ResumeAllEv: ["art::ThreadList::ResumeAll", "void", ["pointer"]],
       _ZN3art11ClassLinker12VisitClassesEPNS_12ClassVisitorE: ["art::ClassLinker::VisitClasses", "void", ["pointer", "pointer"]],
-      _ZN3art11ClassLinker12VisitClassesEPFbPNS_6mirror5ClassEPvES4_: function (address) {
+      _ZN3art11ClassLinker12VisitClassesEPFbPNS_6mirror5ClassEPvES4_: function(address) {
         const visitClasses = new NativeFunction(address, "void", ["pointer", "pointer", "pointer"], nativeFunctionOptions3);
-        this["art::ClassLinker::VisitClasses"] = function (classLinker, visitor) {
+        this["art::ClassLinker::VisitClasses"] = function(classLinker, visitor) {
           visitClasses(classLinker, visitor, NULL);
         };
       },
       _ZNK3art11ClassLinker17VisitClassLoadersEPNS_18ClassLoaderVisitorE: ["art::ClassLinker::VisitClassLoaders", "void", ["pointer", "pointer"]],
       _ZN3art2gc4Heap12VisitObjectsEPFvPNS_6mirror6ObjectEPvES5_: ["art::gc::Heap::VisitObjects", "void", ["pointer", "pointer", "pointer"]],
       _ZN3art2gc4Heap12GetInstancesERNS_24VariableSizedHandleScopeENS_6HandleINS_6mirror5ClassEEEiRNSt3__16vectorINS4_INS5_6ObjectEEENS8_9allocatorISB_EEEE: ["art::gc::Heap::GetInstances", "void", ["pointer", "pointer", "pointer", "int", "pointer"]],
-      _ZN3art2gc4Heap12GetInstancesERNS_24VariableSizedHandleScopeENS_6HandleINS_6mirror5ClassEEEbiRNSt3__16vectorINS4_INS5_6ObjectEEENS8_9allocatorISB_EEEE: function (address) {
+      _ZN3art2gc4Heap12GetInstancesERNS_24VariableSizedHandleScopeENS_6HandleINS_6mirror5ClassEEEbiRNSt3__16vectorINS4_INS5_6ObjectEEENS8_9allocatorISB_EEEE: function(address) {
         const getInstances = new NativeFunction(address, "void", ["pointer", "pointer", "pointer", "bool", "int", "pointer"], nativeFunctionOptions3);
-        this["art::gc::Heap::GetInstances"] = function (instance, scope, hClass, maxCount, instances) {
+        this["art::gc::Heap::GetInstances"] = function(instance, scope, hClass, maxCount, instances) {
           const useIsAssignableFrom = 0;
           getInstances(instance, scope, hClass, useIsAssignableFrom, maxCount, instances);
         };
@@ -1298,40 +1302,40 @@ function _getApi() {
       _ZN3art12StackVisitorC2EPNS_6ThreadEPNS_7ContextENS0_13StackWalkKindEmb: ["art::StackVisitor::StackVisitor", "void", ["pointer", "pointer", "pointer", "uint", "size_t", "bool"]],
       _ZN3art12StackVisitor9WalkStackILNS0_16CountTransitionsE0EEEvb: ["art::StackVisitor::WalkStack", "void", ["pointer", "bool"]],
       _ZNK3art12StackVisitor9GetMethodEv: ["art::StackVisitor::GetMethod", "pointer", ["pointer"]],
-      _ZNK3art12StackVisitor16DescribeLocationEv: function (address) {
+      _ZNK3art12StackVisitor16DescribeLocationEv: function(address) {
         this["art::StackVisitor::DescribeLocation"] = makeCxxMethodWrapperReturningStdStringByValue(address, ["pointer"]);
       },
-      _ZNK3art12StackVisitor24GetCurrentQuickFrameInfoEv: function (address) {
+      _ZNK3art12StackVisitor24GetCurrentQuickFrameInfoEv: function(address) {
         this["art::StackVisitor::GetCurrentQuickFrameInfo"] = makeArtQuickFrameInfoGetter(address);
       },
       _ZN3art7Context6CreateEv: ["art::Context::Create", "pointer", []],
       _ZN3art6Thread18GetLongJumpContextEv: ["art::Thread::GetLongJumpContext", "pointer", ["pointer"]],
-      _ZN3art6mirror5Class13GetDescriptorEPNSt3__112basic_stringIcNS2_11char_traitsIcEENS2_9allocatorIcEEEE: function (address) {
+      _ZN3art6mirror5Class13GetDescriptorEPNSt3__112basic_stringIcNS2_11char_traitsIcEENS2_9allocatorIcEEEE: function(address) {
         this["art::mirror::Class::GetDescriptor"] = address;
       },
-      _ZN3art6mirror5Class11GetLocationEv: function (address) {
+      _ZN3art6mirror5Class11GetLocationEv: function(address) {
         this["art::mirror::Class::GetLocation"] = makeCxxMethodWrapperReturningStdStringByValue(address, ["pointer"]);
       },
-      _ZN3art9ArtMethod12PrettyMethodEb: function (address) {
+      _ZN3art9ArtMethod12PrettyMethodEb: function(address) {
         this["art::ArtMethod::PrettyMethod"] = makeCxxMethodWrapperReturningStdStringByValue(address, ["pointer", "bool"]);
       },
-      _ZN3art12PrettyMethodEPNS_9ArtMethodEb: function (address) {
+      _ZN3art12PrettyMethodEPNS_9ArtMethodEb: function(address) {
         this["art::ArtMethod::PrettyMethodNullSafe"] = makeCxxMethodWrapperReturningStdStringByValue(address, ["pointer", "bool"]);
       },
       _ZN3art6Thread14CurrentFromGdbEv: ["art::Thread::CurrentFromGdb", "pointer", []],
-      _ZN3art6mirror6Object5CloneEPNS_6ThreadE: function (address) {
+      _ZN3art6mirror6Object5CloneEPNS_6ThreadE: function(address) {
         this["art::mirror::Object::Clone"] = new NativeFunction(address, "pointer", ["pointer", "pointer"], nativeFunctionOptions3);
       },
-      _ZN3art6mirror6Object5CloneEPNS_6ThreadEm: function (address) {
+      _ZN3art6mirror6Object5CloneEPNS_6ThreadEm: function(address) {
         const clone = new NativeFunction(address, "pointer", ["pointer", "pointer", "pointer"], nativeFunctionOptions3);
-        this["art::mirror::Object::Clone"] = function (thisPtr, threadPtr) {
+        this["art::mirror::Object::Clone"] = function(thisPtr, threadPtr) {
           const numTargetBytes = NULL;
           return clone(thisPtr, threadPtr, numTargetBytes);
         };
       },
-      _ZN3art6mirror6Object5CloneEPNS_6ThreadEj: function (address) {
+      _ZN3art6mirror6Object5CloneEPNS_6ThreadEj: function(address) {
         const clone = new NativeFunction(address, "pointer", ["pointer", "pointer", "uint"], nativeFunctionOptions3);
-        this["art::mirror::Object::Clone"] = function (thisPtr, threadPtr) {
+        this["art::mirror::Object::Clone"] = function(thisPtr, threadPtr) {
           const numTargetBytes = 0;
           return clone(thisPtr, threadPtr, numTargetBytes);
         };
@@ -1345,9 +1349,9 @@ function _getApi() {
       _ZN3art3Dbg20ManageDeoptimizationEv: ["art::Dbg::ManageDeoptimization", "void", []],
       _ZN3art15instrumentation15Instrumentation20EnableDeoptimizationEv: ["art::Instrumentation::EnableDeoptimization", "void", ["pointer"]],
       _ZN3art15instrumentation15Instrumentation20DeoptimizeEverythingEPKc: ["art::Instrumentation::DeoptimizeEverything", "void", ["pointer", "pointer"]],
-      _ZN3art15instrumentation15Instrumentation20DeoptimizeEverythingEv: function (address) {
+      _ZN3art15instrumentation15Instrumentation20DeoptimizeEverythingEv: function(address) {
         const deoptimize = new NativeFunction(address, "void", ["pointer"], nativeFunctionOptions3);
-        this["art::Instrumentation::DeoptimizeEverything"] = function (instrumentation, key) {
+        this["art::Instrumentation::DeoptimizeEverything"] = function(instrumentation, key) {
           deoptimize(instrumentation);
         };
       },
@@ -1359,10 +1363,10 @@ function _getApi() {
       _ZN3art7Monitor17TranslateLocationEPNS_9ArtMethodEjPPKcPi: ["art::Monitor::TranslateLocation", "void", ["pointer", "uint32", "pointer", "pointer"]]
     },
     variables: {
-      _ZN3art3Dbg9gRegistryE: function (address) {
+      _ZN3art3Dbg9gRegistryE: function(address) {
         this.isJdwpStarted = () => !address.readPointer().isNull();
       },
-      _ZN3art3Dbg15gDebuggerActiveE: function (address) {
+      _ZN3art3Dbg15gDebuggerActiveE: function(address) {
         this.isDebuggerActive = () => !!address.readU8();
       }
     },
@@ -1427,10 +1431,10 @@ function _getApi() {
       JNI_GetCreatedJavaVMs: ["JNI_GetCreatedJavaVMs", "int", ["pointer", "int", "pointer"]]
     },
     variables: {
-      gDvmJni: function (address) {
+      gDvmJni: function(address) {
         this.gDvmJni = address;
       },
-      gDvm: function (address) {
+      gDvm: function(address) {
         this.gDvm = address;
       }
     }
@@ -1605,7 +1609,7 @@ function _getArtRuntimeSpec(api) {
   const codename = getAndroidCodename();
   const { isApiLevel34OrApexEquivalent } = api;
   let spec = null;
-  for (let offset = startOffset; offset !== endOffset; offset += pointerSize5) {
+  for (let offset = startOffset;offset !== endOffset; offset += pointerSize5) {
     const value = runtime.add(offset).readPointer();
     if (value.equals(vm)) {
       let classLinkerOffsets;
@@ -1870,7 +1874,7 @@ function tryGetArtClassLinkerSpec(runtime, runtimeSpec) {
   const endOffset = startOffset + 100 * pointerSize5;
   const apiLevel = getAndroidApiLevel();
   let spec = null;
-  for (let offset = startOffset; offset !== endOffset; offset += pointerSize5) {
+  for (let offset = startOffset;offset !== endOffset; offset += pointerSize5) {
     const value = classLinker.add(offset).readPointer();
     if (value.equals(internTable)) {
       let delta;
@@ -1943,13 +1947,13 @@ function getArtClassSpec(vm) {
           return false;
         }
         const artArrayEnd = Math.min(artArray.length, info.artArrayMax);
-        for (let i = 0; i !== artArrayEnd; i++) {
+        for (let i = 0;i !== artArrayEnd; i++) {
           const fieldPtr = artArray.data.add(i * info.artArrayEntrySize);
           if (fieldPtr.equals(needle)) {
             return true;
           }
         }
-      } catch { }
+      } catch {}
       return false;
     };
     const clazz = env.findClass("java/lang/Thread");
@@ -1963,7 +1967,7 @@ function getArtClassSpec(vm) {
       const fieldStatic = unwrapFieldId(env.getStaticFieldId(clazzRef, "MAX_PRIORITY", "I"));
       let offsetStatic = -1;
       let offsetInstance = -1;
-      for (let offset = 0; offset !== MAX_OFFSET; offset += 4) {
+      for (let offset = 0;offset !== MAX_OFFSET; offset += 4) {
         if (offsetStatic === -1 && hasEntry(object, offset, fieldStatic, fInfo)) {
           offsetStatic = offset;
         }
@@ -1978,7 +1982,7 @@ function getArtClassSpec(vm) {
       const ifieldOffset = offsetInstance;
       let offsetMethods = -1;
       const methodInstance = unwrapMethodId(env.getMethodId(clazzRef, "getName", "()Ljava/lang/String;"));
-      for (let offset = 0; offset !== MAX_OFFSET; offset += 4) {
+      for (let offset = 0;offset !== MAX_OFFSET; offset += 4) {
         if (offsetMethods === -1 && hasEntry(object, offset, methodInstance, mInfo)) {
           offsetMethods = offset;
         }
@@ -1989,7 +1993,7 @@ function getArtClassSpec(vm) {
       let offsetCopiedMethods = -1;
       const methodsArray = readArtArray(object, offsetMethods, mInfo.artArrayLengthSize);
       const methodsArraySize = methodsArray.length;
-      for (let offset = offsetMethods; offset !== MAX_OFFSET; offset += 4) {
+      for (let offset = offsetMethods;offset !== MAX_OFFSET; offset += 4) {
         if (object.add(offset).readU16() === methodsArraySize) {
           offsetCopiedMethods = offset;
           break;
@@ -2030,7 +2034,7 @@ function _getArtMethodSpec(vm) {
     let jniCodeOffset = null;
     let accessFlagsOffset = null;
     let remaining = 2;
-    for (let offset = 0; offset !== 64 && remaining !== 0; offset += 4) {
+    for (let offset = 0;offset !== 64 && remaining !== 0; offset += 4) {
       const field = getElapsedCpuTime.add(offset);
       if (jniCodeOffset === null) {
         const address = field.readPointer();
@@ -2098,7 +2102,7 @@ function _getArtThreadSpec(vm) {
     let topHandleScopeOffset = null;
     let managedStackOffset = null;
     let selfOffset = null;
-    for (let offset = 144; offset !== 256; offset += pointerSize5) {
+    for (let offset = 144;offset !== 256; offset += pointerSize5) {
       const field = threadHandle.add(offset);
       const value = field.readPointer();
       if (value.equals(envHandle)) {
@@ -2398,7 +2402,7 @@ class ArtMethod {
   }
 }
 function makeArtQuickFrameInfoGetter(impl) {
-  return function (self) {
+  return function(self) {
     const result = Memory.alloc(12);
     getArtQuickFrameInfoGetterThunk(impl)(result, self);
     return {
@@ -2833,7 +2837,7 @@ function instrumentArtFixupStaticTrampolines() {
     }
     const { artNterpEntryPoint, artQuickToInterpreterBridge } = api;
     const quickCodeOffset = getArtMethodSpec(api.vm).offset.quickCode;
-    Interceptor.attach(matches[0].address, function () {
+    Interceptor.attach(matches[0].address, function() {
       artController.replacedMethods.synchronize(quickCodeOffset, artNterpEntryPoint, artQuickToInterpreterBridge);
     });
     return;
@@ -2851,7 +2855,7 @@ function ensureArtKnowsHowToHandleReplacementMethods(vm) {
     }
     try {
       Interceptor.replace(getOatQuickMethodHeaderImpl, artController.hooks.ArtMethod.getOatQuickMethodHeader);
-    } catch (e) { }
+    } catch (e) {}
   }
   const apiLevel = getAndroidApiLevel();
   let copyingPhase = null;
@@ -3105,7 +3109,7 @@ function instrumentGetOatQuickMethodHeaderInlinedCopyArm({ address, size, valida
   Memory.patchCode(trampoline, 256, (code) => {
     const writer = new ThumbWriter(code, { pc: trampoline });
     const relocator = new ThumbRelocator(address, writer);
-    for (let i = 0; i !== 2; i++) {
+    for (let i = 0;i !== 2; i++) {
       relocator.readOne();
     }
     relocator.writeAll();
@@ -3154,7 +3158,7 @@ function instrumentGetOatQuickMethodHeaderInlinedCopyArm64({ address, size, vali
   Memory.patchCode(trampoline, 256, (code) => {
     const writer = new Arm64Writer(code, { pc: trampoline });
     const relocator = new Arm64Relocator(address, writer);
-    for (let i = 0; i !== 2; i++) {
+    for (let i = 0;i !== 2; i++) {
       relocator.readOne();
     }
     relocator.writeAll();
@@ -3190,12 +3194,12 @@ function instrumentGetOatQuickMethodHeaderInlinedCopyArm64({ address, size, vali
       "x17"
     ];
     const numSavedRegs = savedRegs.length;
-    for (let i = 0; i !== numSavedRegs; i += 2) {
+    for (let i = 0;i !== numSavedRegs; i += 2) {
       writer.putPushRegReg(savedRegs[i], savedRegs[i + 1]);
     }
     writer.putCallAddressWithArguments(artController.replacedMethods.isReplacement, [methodReg]);
     writer.putCmpRegReg("x0", "xzr");
-    for (let i = numSavedRegs - 2; i >= 0; i -= 2) {
+    for (let i = numSavedRegs - 2;i >= 0; i -= 2) {
       writer.putPopRegReg(savedRegs[i], savedRegs[i + 1]);
     }
     writer.putBCondLabel("ne", "runtime_or_replacement_method");
@@ -4311,7 +4315,7 @@ function computeDalvikJniArgInfo(methodId) {
       break;
   }
   let hints = 0;
-  for (let i = shorty.length - 1; i > 0; i--) {
+  for (let i = shorty.length - 1;i > 0; i--) {
     const ch = shorty[i];
     hints += ch === "D" || ch === "J" ? 2 : 1;
   }
@@ -4403,13 +4407,13 @@ class JdwpSession {
     this._controlFd = controlPair[0];
     this._clientFd = clientPair[0];
     let acceptListener = null;
-    acceptListener = Interceptor.attach(acceptImpl, function (args) {
+    acceptListener = Interceptor.attach(acceptImpl, function(args) {
       const state = args[0];
       const controlSockPtr = Memory.scanSync(state.add(8252), 256, "00 ff ff ff ff 00")[0].address.add(1);
       controlSockPtr.writeS32(controlPair[1]);
       acceptListener.detach();
     });
-    Interceptor.replace(receiveClientFdImpl, new NativeCallback(function (state) {
+    Interceptor.replace(receiveClientFdImpl, new NativeCallback(function(state) {
       Interceptor.revert(receiveClientFdImpl);
       return clientPair[1];
     }, "int", ["pointer"]));
@@ -4423,7 +4427,7 @@ class JdwpSession {
     try {
       await output.writeAll(handshakePacket);
       await input.readAll(handshakePacket.length);
-    } catch (e) { }
+    } catch (e) {}
   }
 }
 function startJdwp(api) {
@@ -4472,7 +4476,7 @@ function makeAddGlobalRefFallbackForAndroid5(api) {
   const acquire = api["art::ReaderWriterMutex::ExclusiveLock"];
   const release = api["art::ReaderWriterMutex::ExclusiveUnlock"];
   const IRT_FIRST_SEGMENT = 0;
-  return function (vm, thread, obj) {
+  return function(vm, thread, obj) {
     acquire(lock, thread);
     try {
       return add(table, IRT_FIRST_SEGMENT, obj);
@@ -4486,7 +4490,7 @@ function makeDecodeGlobalFallback(api) {
   if (decode === undefined) {
     throw new Error("art::Thread::DecodeJObject is not available; please file a bug");
   }
-  return function (vm, thread, ref) {
+  return function(vm, thread, ref) {
     return decode(thread, ref);
   };
 }
@@ -5115,7 +5119,7 @@ function makeCxxMethodWrapperReturningPointerByValueGeneric(address, argTypes) {
 }
 function makeCxxMethodWrapperReturningPointerByValueInFirstArg(address, argTypes) {
   const impl = new NativeFunction(address, "void", ["pointer"].concat(argTypes), nativeFunctionOptions3);
-  return function () {
+  return function() {
     const resultPtr = Memory.alloc(pointerSize5);
     impl(resultPtr, ...arguments);
     return resultPtr.readPointer();
@@ -5132,7 +5136,7 @@ function makeCxxMethodWrapperReturningStdStringByValue(impl, argTypes) {
           const argCount = 1 + argTypes.length;
           const argvSize = argCount * 4;
           writer.putSubRegImm("esp", argvSize);
-          for (let i = 0; i !== argCount; i++) {
+          for (let i = 0;i !== argCount; i++) {
             const offset = i * 4;
             writer.putMovRegRegOffsetPtr("eax", "esp", argvSize + 4 + offset);
             writer.putMovRegOffsetPtrReg("esp", offset, "eax");
@@ -5152,7 +5156,7 @@ function makeCxxMethodWrapperReturningStdStringByValue(impl, argTypes) {
         });
       }
       const invokeThunk = new NativeFunction(thunk, "void", ["pointer"].concat(argTypes), nativeFunctionOptions3);
-      const wrapper = function (...args) {
+      const wrapper = function(...args) {
         invokeThunk(...args);
       };
       wrapper.handle = thunk;
@@ -5276,7 +5280,7 @@ class BaseHandleScope {
     this.link = link;
     this.numberOfReferences = numberOfReferences;
   }
-  dispose() { }
+  dispose() {}
   get link() {
     return new BaseHandleScope(this._link.readPointer());
   }
@@ -5392,7 +5396,7 @@ class FixedSizeHandleScope extends BaseHandleScope {
   }
 }
 var objectVisitorPredicateFactories = {
-  arm: function (needle, onMatch) {
+  arm: function(needle, onMatch) {
     const size = Process.pageSize;
     const predicate = Memory.alloc(size);
     Memory.protect(predicate, size, "rwx");
@@ -5411,7 +5415,7 @@ var objectVisitorPredicateFactories = {
     const needleOffset = instructions.length * 2;
     const onMatchOffset = needleOffset + 4;
     const codeSize = onMatchOffset + 4;
-    Memory.patchCode(predicate, codeSize, function (address) {
+    Memory.patchCode(predicate, codeSize, function(address) {
       instructions.forEach((instruction, index) => {
         address.add(index * 2).writeU16(instruction);
       });
@@ -5420,7 +5424,7 @@ var objectVisitorPredicateFactories = {
     });
     return predicate.or(1);
   },
-  arm64: function (needle, onMatch) {
+  arm64: function(needle, onMatch) {
     const size = Process.pageSize;
     const predicate = Memory.alloc(size);
     Memory.protect(predicate, size, "rwx");
@@ -5438,7 +5442,7 @@ var objectVisitorPredicateFactories = {
     const needleOffset = instructions.length * 4;
     const onMatchOffset = needleOffset + 4;
     const codeSize = onMatchOffset + 8;
-    Memory.patchCode(predicate, codeSize, function (address) {
+    Memory.patchCode(predicate, codeSize, function(address) {
       instructions.forEach((instruction, index) => {
         address.add(index * 4).writeU32(instruction);
       });
@@ -5517,25 +5521,25 @@ function _getApi2() {
       "OopMapCache::flush_obsolete_entries": ["OopMapCache::flush_obsolete_entries", "void", ["pointer"]]
     },
     variables: {
-      "VM_RedefineClasses::`vftable'": function (address) {
+      "VM_RedefineClasses::`vftable'": function(address) {
         this.vtableRedefineClasses = address;
       },
-      "VM_RedefineClasses::doit": function (address) {
+      "VM_RedefineClasses::doit": function(address) {
         this.redefineClassesDoIt = address;
       },
-      "VM_RedefineClasses::doit_prologue": function (address) {
+      "VM_RedefineClasses::doit_prologue": function(address) {
         this.redefineClassesDoItPrologue = address;
       },
-      "VM_RedefineClasses::doit_epilogue": function (address) {
+      "VM_RedefineClasses::doit_epilogue": function(address) {
         this.redefineClassesDoItEpilogue = address;
       },
-      "VM_RedefineClasses::allow_nested_vm_operations": function (address) {
+      "VM_RedefineClasses::allow_nested_vm_operations": function(address) {
         this.redefineClassesAllow = address;
       },
-      "NMethodSweeper::_traversals": function (address) {
+      "NMethodSweeper::_traversals": function(address) {
         this.traversals = address;
       },
-      "NMethodSweeper::_should_sweep": function (address) {
+      "NMethodSweeper::_should_sweep": function(address) {
         this.shouldSweep = address;
       }
     },
@@ -5551,16 +5555,16 @@ function _getApi2() {
       _ZN6Method24restore_unshareable_infoEP6Thread: ["Method::restore_unshareable_info", "void", ["pointer", "pointer"]],
       _ZN6Method11link_methodERK12methodHandleP10JavaThread: ["Method::link_method", "void", ["pointer", "pointer", "pointer"]],
       _ZN6Method10jmethod_idEv: ["Method::jmethod_id", "pointer", ["pointer"]],
-      _ZN6Method10clear_codeEv: function (address) {
+      _ZN6Method10clear_codeEv: function(address) {
         const clearCode = new NativeFunction(address, "void", ["pointer"], nativeFunctionOptions4);
-        this["Method::clear_code"] = function (thisPtr) {
+        this["Method::clear_code"] = function(thisPtr) {
           clearCode(thisPtr);
         };
       },
-      _ZN6Method10clear_codeEb: function (address) {
+      _ZN6Method10clear_codeEb: function(address) {
         const clearCode = new NativeFunction(address, "void", ["pointer", "int"], nativeFunctionOptions4);
         const lock = 0;
-        this["Method::clear_code"] = function (thisPtr) {
+        this["Method::clear_code"] = function(thisPtr) {
           clearCode(thisPtr, lock);
         };
       },
@@ -5570,15 +5574,15 @@ function _getApi2() {
       _ZN18VM_RedefineClasses20flush_dependent_codeE19instanceKlassHandleP6Thread: ["VM_RedefineClasses::flush_dependent_code", "void", ["pointer", "pointer", "pointer"]],
       _ZN19ResolvedMethodTable21adjust_method_entriesEPb: ["ResolvedMethodTable::adjust_method_entries", "void", ["pointer"]],
       _ZN15MemberNameTable21adjust_method_entriesEP13InstanceKlassPb: ["MemberNameTable::adjust_method_entries", "void", ["pointer", "pointer", "pointer"]],
-      _ZN17ConstantPoolCache21adjust_method_entriesEPb: function (address) {
+      _ZN17ConstantPoolCache21adjust_method_entriesEPb: function(address) {
         const adjustMethod = new NativeFunction(address, "void", ["pointer", "pointer"], nativeFunctionOptions4);
-        this["ConstantPoolCache::adjust_method_entries"] = function (thisPtr, holderPtr, tracePtr) {
+        this["ConstantPoolCache::adjust_method_entries"] = function(thisPtr, holderPtr, tracePtr) {
           adjustMethod(thisPtr, tracePtr);
         };
       },
-      _ZN17ConstantPoolCache21adjust_method_entriesEP13InstanceKlassPb: function (address) {
+      _ZN17ConstantPoolCache21adjust_method_entriesEP13InstanceKlassPb: function(address) {
         const adjustMethod = new NativeFunction(address, "void", ["pointer", "pointer", "pointer"], nativeFunctionOptions4);
-        this["ConstantPoolCache::adjust_method_entries"] = function (thisPtr, holderPtr, tracePtr) {
+        this["ConstantPoolCache::adjust_method_entries"] = function(thisPtr, holderPtr, tracePtr) {
           adjustMethod(thisPtr, holderPtr, tracePtr);
         };
       },
@@ -5593,61 +5597,61 @@ function _getApi2() {
       JVM_Sleep: ["JVM_Sleep", "void", ["pointer", "pointer", "long"]]
     },
     variables: {
-      _ZN18VM_RedefineClasses14_the_class_oopE: function (address) {
+      _ZN18VM_RedefineClasses14_the_class_oopE: function(address) {
         this.redefineClass = address;
       },
-      _ZN18VM_RedefineClasses10_the_classE: function (address) {
+      _ZN18VM_RedefineClasses10_the_classE: function(address) {
         this.redefineClass = address;
       },
-      _ZN18VM_RedefineClasses25AdjustCpoolCacheAndVtable8do_klassEP5Klass: function (address) {
+      _ZN18VM_RedefineClasses25AdjustCpoolCacheAndVtable8do_klassEP5Klass: function(address) {
         this.doKlass = address;
       },
-      _ZN18VM_RedefineClasses22AdjustAndCleanMetadata8do_klassEP5Klass: function (address) {
+      _ZN18VM_RedefineClasses22AdjustAndCleanMetadata8do_klassEP5Klass: function(address) {
         this.doKlass = address;
       },
-      _ZTV18VM_RedefineClasses: function (address) {
+      _ZTV18VM_RedefineClasses: function(address) {
         this.vtableRedefineClasses = address;
       },
-      _ZN18VM_RedefineClasses4doitEv: function (address) {
+      _ZN18VM_RedefineClasses4doitEv: function(address) {
         this.redefineClassesDoIt = address;
       },
-      _ZN18VM_RedefineClasses13doit_prologueEv: function (address) {
+      _ZN18VM_RedefineClasses13doit_prologueEv: function(address) {
         this.redefineClassesDoItPrologue = address;
       },
-      _ZN18VM_RedefineClasses13doit_epilogueEv: function (address) {
+      _ZN18VM_RedefineClasses13doit_epilogueEv: function(address) {
         this.redefineClassesDoItEpilogue = address;
       },
-      _ZN18VM_RedefineClassesD0Ev: function (address) {
+      _ZN18VM_RedefineClassesD0Ev: function(address) {
         this.redefineClassesDispose0 = address;
       },
-      _ZN18VM_RedefineClassesD1Ev: function (address) {
+      _ZN18VM_RedefineClassesD1Ev: function(address) {
         this.redefineClassesDispose1 = address;
       },
-      _ZNK18VM_RedefineClasses26allow_nested_vm_operationsEv: function (address) {
+      _ZNK18VM_RedefineClasses26allow_nested_vm_operationsEv: function(address) {
         this.redefineClassesAllow = address;
       },
-      _ZNK18VM_RedefineClasses14print_on_errorEP12outputStream: function (address) {
+      _ZNK18VM_RedefineClasses14print_on_errorEP12outputStream: function(address) {
         this.redefineClassesOnError = address;
       },
-      _ZN13InstanceKlass33create_new_default_vtable_indicesEiP10JavaThread: function (address) {
+      _ZN13InstanceKlass33create_new_default_vtable_indicesEiP10JavaThread: function(address) {
         this.createNewDefaultVtableIndices = address;
       },
-      _ZN13InstanceKlass33create_new_default_vtable_indicesEiP6Thread: function (address) {
+      _ZN13InstanceKlass33create_new_default_vtable_indicesEiP6Thread: function(address) {
         this.createNewDefaultVtableIndices = address;
       },
-      _ZN19Abstract_VM_Version19jre_release_versionEv: function (address) {
+      _ZN19Abstract_VM_Version19jre_release_versionEv: function(address) {
         const getVersion = new NativeFunction(address, "pointer", [], nativeFunctionOptions4);
         const versionS = getVersion().readCString();
         this.version = versionS.startsWith("1.8") ? 8 : versionS.startsWith("9.") ? 9 : parseInt(versionS.slice(0, 2), 10);
         this.versionS = versionS;
       },
-      _ZN14NMethodSweeper11_traversalsE: function (address) {
+      _ZN14NMethodSweeper11_traversalsE: function(address) {
         this.traversals = address;
       },
-      _ZN14NMethodSweeper21_sweep_fractions_leftE: function (address) {
+      _ZN14NMethodSweeper21_sweep_fractions_leftE: function(address) {
         this.fractions = address;
       },
-      _ZN14NMethodSweeper13_should_sweepE: function (address) {
+      _ZN14NMethodSweeper13_should_sweepE: function(address) {
         this.shouldSweep = address;
       }
     },
@@ -5682,20 +5686,20 @@ function _getApi2() {
     ]
   }];
   const missing = [];
-  pending.forEach(function (api) {
+  pending.forEach(function(api) {
     const module = api.module;
     const functions = api.functions || {};
     const variables = api.variables || {};
     const optionals = new Set(api.optionals || []);
-    const tmp = module.enumerateExports().reduce(function (result, exp) {
+    const tmp = module.enumerateExports().reduce(function(result, exp) {
       result[exp.name] = exp;
       return result;
     }, {});
-    const exportByName = module.enumerateSymbols().reduce(function (result, exp) {
+    const exportByName = module.enumerateSymbols().reduce(function(result, exp) {
       result[exp.name] = exp;
       return result;
     }, tmp);
-    Object.keys(functions).forEach(function (name) {
+    Object.keys(functions).forEach(function(name) {
       const exp = exportByName[name];
       if (exp !== undefined) {
         const signature = functions[name];
@@ -5710,7 +5714,7 @@ function _getApi2() {
         }
       }
     });
-    Object.keys(variables).forEach(function (name) {
+    Object.keys(variables).forEach(function(name) {
       const exp = exportByName[name];
       if (exp !== undefined) {
         const handler = variables[name];
@@ -5801,7 +5805,7 @@ function parseX64ThreadOffset(insn) {
   }
   return disp;
 }
-function ensureClassInitialized2(env, classRef) { }
+function ensureClassInitialized2(env, classRef) {}
 
 class JvmMethodMangler {
   constructor(methodId) {
@@ -5968,9 +5972,9 @@ function _getJvmThreadSpec() {
   const vtablePtr = vtableRedefineClasses.add(2 * pointerSize6);
   const vtableSize = 15 * pointerSize6;
   const vtable2 = Memory.dup(vtablePtr, vtableSize);
-  const emptyCallback = new NativeCallback(() => { }, "void", ["pointer"]);
+  const emptyCallback = new NativeCallback(() => {}, "void", ["pointer"]);
   let doItOffset, prologueOffset, epilogueOffset;
-  for (let offset = 0; offset !== vtableSize; offset += pointerSize6) {
+  for (let offset = 0;offset !== vtableSize; offset += pointerSize6) {
     const element = vtable2.add(offset);
     const value = element.readPointer();
     if (redefineClassesOnError !== undefined && value.equals(redefineClassesOnError) || redefineClassesDispose0 !== undefined && value.equals(redefineClassesDispose0) || redefineClassesDispose1 !== undefined && value.equals(redefineClassesDispose1)) {
@@ -6178,9 +6182,9 @@ function _getJvmMethodSpec() {
   const methodIdnumOffset = constMethodSizeOffset + 14;
   const cacheOffset = 2 * pointerSize6;
   const instanceKlassOffset = 3 * pointerSize6;
-  const getAdapterPointer = adapterInConstMethodSize !== 0 ? function (method, constMethod) {
+  const getAdapterPointer = adapterInConstMethodSize !== 0 ? function(method, constMethod) {
     return constMethod.add(adapterInConstMethodOffset);
-  } : function (method, constMethod) {
+  } : function(method, constMethod) {
     return method.add(adapterInMethodOffset);
   };
   return {
@@ -7657,7 +7661,7 @@ function makeHandleUnwrapper(cm2, vm) {
     return nullUnwrap;
   }
   const decodeGlobal = api["art::JavaVMExt::DecodeGlobal"];
-  return function (handle, env, fn) {
+  return function(handle, env, fn) {
     let result;
     withRunnableArtThread(vm, env, (thread) => {
       const object = decodeGlobal(vm, thread, handle);
@@ -7716,7 +7720,7 @@ class LRU {
 var lookup = [];
 var revLookup = [];
 var code2 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-for (i = 0, len = code2.length; i < len; ++i)
+for (i = 0, len = code2.length;i < len; ++i)
   lookup[i] = code2[i], revLookup[code2.charCodeAt(i)] = i;
 var i;
 var len;
@@ -7737,7 +7741,7 @@ function _byteLength(validLen, placeHoldersLen) {
 }
 function toByteArray(b64) {
   var tmp, lens = getLens(b64), validLen = lens[0], placeHoldersLen = lens[1], arr = new Uint8Array(_byteLength(validLen, placeHoldersLen)), curByte = 0, len2 = placeHoldersLen > 0 ? validLen - 4 : validLen, i2;
-  for (i2 = 0; i2 < len2; i2 += 4)
+  for (i2 = 0;i2 < len2; i2 += 4)
     tmp = revLookup[b64.charCodeAt(i2)] << 18 | revLookup[b64.charCodeAt(i2 + 1)] << 12 | revLookup[b64.charCodeAt(i2 + 2)] << 6 | revLookup[b64.charCodeAt(i2 + 3)], arr[curByte++] = tmp >> 16 & 255, arr[curByte++] = tmp >> 8 & 255, arr[curByte++] = tmp & 255;
   if (placeHoldersLen === 2)
     tmp = revLookup[b64.charCodeAt(i2)] << 2 | revLookup[b64.charCodeAt(i2 + 1)] >> 4, arr[curByte++] = tmp & 255;
@@ -7750,13 +7754,13 @@ function tripletToBase64(num) {
 }
 function encodeChunk(uint8, start, end) {
   var tmp, output = [];
-  for (var i2 = start; i2 < end; i2 += 3)
+  for (var i2 = start;i2 < end; i2 += 3)
     tmp = (uint8[i2] << 16 & 16711680) + (uint8[i2 + 1] << 8 & 65280) + (uint8[i2 + 2] & 255), output.push(tripletToBase64(tmp));
   return output.join("");
 }
 function fromByteArray(uint8) {
   var tmp, len2 = uint8.length, extraBytes = len2 % 3, parts = [], maxChunkLength = 16383;
-  for (var i2 = 0, len22 = len2 - extraBytes; i2 < len22; i2 += maxChunkLength)
+  for (var i2 = 0, len22 = len2 - extraBytes;i2 < len22; i2 += maxChunkLength)
     parts.push(encodeChunk(uint8, i2, i2 + maxChunkLength > len22 ? len22 : i2 + maxChunkLength));
   if (extraBytes === 1)
     tmp = uint8[len2 - 1], parts.push(lookup[tmp >> 2] + lookup[tmp << 4 & 63] + "==");
@@ -7767,10 +7771,10 @@ function fromByteArray(uint8) {
 function read(buffer, offset, isLE, mLen, nBytes) {
   var e, m, eLen = nBytes * 8 - mLen - 1, eMax = (1 << eLen) - 1, eBias = eMax >> 1, nBits = -7, i2 = isLE ? nBytes - 1 : 0, d = isLE ? -1 : 1, s = buffer[offset + i2];
   i2 += d, e = s & (1 << -nBits) - 1, s >>= -nBits, nBits += eLen;
-  for (; nBits > 0; e = e * 256 + buffer[offset + i2], i2 += d, nBits -= 8)
+  for (;nBits > 0; e = e * 256 + buffer[offset + i2], i2 += d, nBits -= 8)
     ;
   m = e & (1 << -nBits) - 1, e >>= -nBits, nBits += mLen;
-  for (; nBits > 0; m = m * 256 + buffer[offset + i2], i2 += d, nBits -= 8)
+  for (;nBits > 0; m = m * 256 + buffer[offset + i2], i2 += d, nBits -= 8)
     ;
   if (e === 0)
     e = 1 - eBias;
@@ -7800,10 +7804,10 @@ function write(buffer, value, offset, isLE, mLen, nBytes) {
     else
       m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen), e = 0;
   }
-  for (; mLen >= 8; buffer[offset + i2] = m & 255, i2 += d, m /= 256, mLen -= 8)
+  for (;mLen >= 8; buffer[offset + i2] = m & 255, i2 += d, m /= 256, mLen -= 8)
     ;
   e = e << mLen | m, eLen += mLen;
-  for (; eLen > 0; buffer[offset + i2] = e & 255, i2 += d, e /= 256, eLen -= 8)
+  for (;eLen > 0; buffer[offset + i2] = e & 255, i2 += d, e /= 256, eLen -= 8)
     ;
   buffer[offset + i2 - d] |= s * 128;
 }
@@ -7837,15 +7841,15 @@ function E(sym, getMessage, Base) {
     }
   };
 }
-var ERR_BUFFER_OUT_OF_BOUNDS = E("ERR_BUFFER_OUT_OF_BOUNDS", function (name) {
+var ERR_BUFFER_OUT_OF_BOUNDS = E("ERR_BUFFER_OUT_OF_BOUNDS", function(name) {
   if (name)
     return `${name} is outside of buffer bounds`;
   return "Attempt to access memory outside buffer bounds";
 }, RangeError);
-var ERR_INVALID_ARG_TYPE = E("ERR_INVALID_ARG_TYPE", function (name, actual) {
+var ERR_INVALID_ARG_TYPE = E("ERR_INVALID_ARG_TYPE", function(name, actual) {
   return `The "${name}" argument must be of type number. Received type ${typeof actual}`;
 }, TypeError);
-var ERR_OUT_OF_RANGE = E("ERR_OUT_OF_RANGE", function (str, range, input) {
+var ERR_OUT_OF_RANGE = E("ERR_OUT_OF_RANGE", function(str, range, input) {
   let msg = `The value of "${str}" is out of range.`, received = input;
   if (Number.isInteger(input) && Math.abs(input) > 4294967296)
     received = addNumericalSeparator(String(input));
@@ -7864,20 +7868,16 @@ function Buffer(arg, encodingOrOffset, length) {
   }
   return from(arg, encodingOrOffset, length);
 }
-Object.defineProperty(Buffer.prototype, "parent", {
-  enumerable: true, get: function () {
-    if (!Buffer.isBuffer(this))
-      return;
-    return this.buffer;
-  }
-});
-Object.defineProperty(Buffer.prototype, "offset", {
-  enumerable: true, get: function () {
-    if (!Buffer.isBuffer(this))
-      return;
-    return this.byteOffset;
-  }
-});
+Object.defineProperty(Buffer.prototype, "parent", { enumerable: true, get: function() {
+  if (!Buffer.isBuffer(this))
+    return;
+  return this.buffer;
+} });
+Object.defineProperty(Buffer.prototype, "offset", { enumerable: true, get: function() {
+  if (!Buffer.isBuffer(this))
+    return;
+  return this.byteOffset;
+} });
 Buffer.poolSize = 8192;
 function from(value, encodingOrOffset, length) {
   if (typeof value === "string")
@@ -7902,7 +7902,7 @@ function from(value, encodingOrOffset, length) {
     return Buffer.from(value[Symbol.toPrimitive]("string"), encodingOrOffset, length);
   throw TypeError("The first argument must be one of type string, Buffer, ArrayBuffer, Array, or Array-like Object. Received type " + typeof value);
 }
-Buffer.from = function (value, encodingOrOffset, length) {
+Buffer.from = function(value, encodingOrOffset, length) {
   return from(value, encodingOrOffset, length);
 };
 Object.setPrototypeOf(Buffer.prototype, Uint8Array.prototype);
@@ -7920,16 +7920,16 @@ function alloc(size, fill, encoding) {
     return typeof encoding === "string" ? createBuffer(size).fill(fill, encoding) : createBuffer(size).fill(fill);
   return createBuffer(size);
 }
-Buffer.alloc = function (size, fill, encoding) {
+Buffer.alloc = function(size, fill, encoding) {
   return alloc(size, fill, encoding);
 };
 function allocUnsafe(size) {
   return assertSize(size), createBuffer(size < 0 ? 0 : checked(size) | 0);
 }
-Buffer.allocUnsafe = function (size) {
+Buffer.allocUnsafe = function(size) {
   return allocUnsafe(size);
 };
-Buffer.allocUnsafeSlow = function (size) {
+Buffer.allocUnsafeSlow = function(size) {
   return allocUnsafe(size);
 };
 function fromString(string, encoding) {
@@ -7944,7 +7944,7 @@ function fromString(string, encoding) {
 }
 function fromArrayLike(array) {
   let length = array.length < 0 ? 0 : checked(array.length) | 0, buf = createBuffer(length);
-  for (let i2 = 0; i2 < length; i2 += 1)
+  for (let i2 = 0;i2 < length; i2 += 1)
     buf[i2] = array[i2] & 255;
   return buf;
 }
@@ -7989,10 +7989,10 @@ function checked(length) {
     throw RangeError("Attempt to allocate Buffer larger than maximum size: 0x" + kMaxLength.toString(16) + " bytes");
   return length | 0;
 }
-Buffer.isBuffer = function (b) {
+Buffer.isBuffer = function(b) {
   return b != null && b._isBuffer === true && b !== Buffer.prototype;
 };
-Buffer.compare = function (a, b) {
+Buffer.compare = function(a, b) {
   if (isInstance(a, Uint8Array))
     a = Buffer.from(a, a.offset, a.byteLength);
   if (isInstance(b, Uint8Array))
@@ -8002,7 +8002,7 @@ Buffer.compare = function (a, b) {
   if (a === b)
     return 0;
   let x = a.length, y = b.length;
-  for (let i2 = 0, len2 = Math.min(x, y); i2 < len2; ++i2)
+  for (let i2 = 0, len2 = Math.min(x, y);i2 < len2; ++i2)
     if (a[i2] !== b[i2]) {
       x = a[i2], y = b[i2];
       break;
@@ -8013,7 +8013,7 @@ Buffer.compare = function (a, b) {
     return 1;
   return 0;
 };
-Buffer.isEncoding = function (encoding) {
+Buffer.isEncoding = function(encoding) {
   switch (String(encoding).toLowerCase()) {
     case "hex":
     case "utf8":
@@ -8031,7 +8031,7 @@ Buffer.isEncoding = function (encoding) {
       return false;
   }
 };
-Buffer.concat = function (list, length) {
+Buffer.concat = function(list, length) {
   if (!Array.isArray(list))
     throw TypeError('"list" argument must be an Array of Buffers');
   if (list.length === 0)
@@ -8039,11 +8039,11 @@ Buffer.concat = function (list, length) {
   let i2;
   if (length === undefined) {
     length = 0;
-    for (i2 = 0; i2 < list.length; ++i2)
+    for (i2 = 0;i2 < list.length; ++i2)
       length += list[i2].length;
   }
   let buffer = Buffer.allocUnsafe(length), pos = 0;
-  for (i2 = 0; i2 < list.length; ++i2) {
+  for (i2 = 0;i2 < list.length; ++i2) {
     let buf = list[i2];
     if (isInstance(buf, Uint8Array))
       if (pos + buf.length > buffer.length) {
@@ -8071,7 +8071,7 @@ function byteLength(string, encoding) {
   if (!mustMatch && len2 === 0)
     return 0;
   let loweredCase = false;
-  for (; ;)
+  for (;; )
     switch (encoding) {
       case "ascii":
       case "latin1":
@@ -8140,31 +8140,31 @@ function swap(b, n, m) {
   let i2 = b[n];
   b[n] = b[m], b[m] = i2;
 }
-Buffer.prototype.swap16 = function () {
+Buffer.prototype.swap16 = function() {
   let len2 = this.length;
   if (len2 % 2 !== 0)
     throw RangeError("Buffer size must be a multiple of 16-bits");
-  for (let i2 = 0; i2 < len2; i2 += 2)
+  for (let i2 = 0;i2 < len2; i2 += 2)
     swap(this, i2, i2 + 1);
   return this;
 };
-Buffer.prototype.swap32 = function () {
+Buffer.prototype.swap32 = function() {
   let len2 = this.length;
   if (len2 % 4 !== 0)
     throw RangeError("Buffer size must be a multiple of 32-bits");
-  for (let i2 = 0; i2 < len2; i2 += 4)
+  for (let i2 = 0;i2 < len2; i2 += 4)
     swap(this, i2, i2 + 3), swap(this, i2 + 1, i2 + 2);
   return this;
 };
-Buffer.prototype.swap64 = function () {
+Buffer.prototype.swap64 = function() {
   let len2 = this.length;
   if (len2 % 8 !== 0)
     throw RangeError("Buffer size must be a multiple of 64-bits");
-  for (let i2 = 0; i2 < len2; i2 += 8)
+  for (let i2 = 0;i2 < len2; i2 += 8)
     swap(this, i2, i2 + 7), swap(this, i2 + 1, i2 + 6), swap(this, i2 + 2, i2 + 5), swap(this, i2 + 3, i2 + 4);
   return this;
 };
-Buffer.prototype.toString = function () {
+Buffer.prototype.toString = function() {
   let length = this.length;
   if (length === 0)
     return "";
@@ -8173,14 +8173,14 @@ Buffer.prototype.toString = function () {
   return slowToString.apply(this, arguments);
 };
 Buffer.prototype.toLocaleString = Buffer.prototype.toString;
-Buffer.prototype.equals = function (b) {
+Buffer.prototype.equals = function(b) {
   if (!Buffer.isBuffer(b))
     throw TypeError("Argument must be a Buffer");
   if (this === b)
     return true;
   return Buffer.compare(this, b) === 0;
 };
-Buffer.prototype.inspect = function () {
+Buffer.prototype.inspect = function() {
   let str = "", max = INSPECT_MAX_BYTES;
   if (str = this.toString("hex", 0, max).replace(/(.{2})/g, "$1 ").trim(), this.length > max)
     str += " ... ";
@@ -8188,7 +8188,7 @@ Buffer.prototype.inspect = function () {
 };
 if (customInspectSymbol)
   Buffer.prototype[customInspectSymbol] = Buffer.prototype.inspect;
-Buffer.prototype.compare = function (target, start, end, thisStart, thisEnd) {
+Buffer.prototype.compare = function(target, start, end, thisStart, thisEnd) {
   if (isInstance(target, Uint8Array))
     target = Buffer.from(target, target.offset, target.byteLength);
   if (!Buffer.isBuffer(target))
@@ -8212,7 +8212,7 @@ Buffer.prototype.compare = function (target, start, end, thisStart, thisEnd) {
   if (start >>>= 0, end >>>= 0, thisStart >>>= 0, thisEnd >>>= 0, this === target)
     return 0;
   let x = thisEnd - thisStart, y = end - start, len2 = Math.min(x, y), thisCopy = this.slice(thisStart, thisEnd), targetCopy = target.slice(start, end);
-  for (let i2 = 0; i2 < len2; ++i2)
+  for (let i2 = 0;i2 < len2; ++i2)
     if (thisCopy[i2] !== targetCopy[i2]) {
       x = thisCopy[i2], y = targetCopy[i2];
       break;
@@ -8280,7 +8280,7 @@ function arrayIndexOf(arr, val, byteOffset, encoding, dir) {
   let i2;
   if (dir) {
     let foundIndex = -1;
-    for (i2 = byteOffset; i2 < arrLength; i2++)
+    for (i2 = byteOffset;i2 < arrLength; i2++)
       if (read2(arr, i2) === read2(val, foundIndex === -1 ? 0 : i2 - foundIndex)) {
         if (foundIndex === -1)
           foundIndex = i2;
@@ -8294,9 +8294,9 @@ function arrayIndexOf(arr, val, byteOffset, encoding, dir) {
   } else {
     if (byteOffset + valLength > arrLength)
       byteOffset = arrLength - valLength;
-    for (i2 = byteOffset; i2 >= 0; i2--) {
+    for (i2 = byteOffset;i2 >= 0; i2--) {
       let found = true;
-      for (let j = 0; j < valLength; j++)
+      for (let j = 0;j < valLength; j++)
         if (read2(arr, i2 + j) !== read2(val, j)) {
           found = false;
           break;
@@ -8307,13 +8307,13 @@ function arrayIndexOf(arr, val, byteOffset, encoding, dir) {
   }
   return -1;
 }
-Buffer.prototype.includes = function (val, byteOffset, encoding) {
+Buffer.prototype.includes = function(val, byteOffset, encoding) {
   return this.indexOf(val, byteOffset, encoding) !== -1;
 };
-Buffer.prototype.indexOf = function (val, byteOffset, encoding) {
+Buffer.prototype.indexOf = function(val, byteOffset, encoding) {
   return bidirectionalIndexOf(this, val, byteOffset, encoding, true);
 };
-Buffer.prototype.lastIndexOf = function (val, byteOffset, encoding) {
+Buffer.prototype.lastIndexOf = function(val, byteOffset, encoding) {
   return bidirectionalIndexOf(this, val, byteOffset, encoding, false);
 };
 function hexWrite(buf, string, offset, length) {
@@ -8327,7 +8327,7 @@ function hexWrite(buf, string, offset, length) {
   if (length > strLen / 2)
     length = strLen / 2;
   let i2;
-  for (i2 = 0; i2 < length; ++i2) {
+  for (i2 = 0;i2 < length; ++i2) {
     let parsed = parseInt(string.substr(i2 * 2, 2), 16);
     if (Number.isNaN(parsed))
       return i2;
@@ -8347,7 +8347,7 @@ function base64Write(buf, string, offset, length) {
 function ucs2Write(buf, string, offset, length) {
   return blitBuffer(utf16leToBytes(string, buf.length - offset), buf, offset, length);
 }
-Buffer.prototype.write = function (string, offset, length, encoding) {
+Buffer.prototype.write = function(string, offset, length, encoding) {
   if (offset === undefined)
     encoding = "utf8", length = this.length, offset = 0;
   else if (length === undefined && typeof offset === "string")
@@ -8368,7 +8368,7 @@ Buffer.prototype.write = function (string, offset, length, encoding) {
   if (!encoding)
     encoding = "utf8";
   let loweredCase = false;
-  for (; ;)
+  for (;; )
     switch (encoding) {
       case "hex":
         return hexWrite(this, string, offset, length);
@@ -8392,7 +8392,7 @@ Buffer.prototype.write = function (string, offset, length, encoding) {
         encoding = ("" + encoding).toLowerCase(), loweredCase = true;
     }
 };
-Buffer.prototype.toJSON = function () {
+Buffer.prototype.toJSON = function() {
   return { type: "Buffer", data: Array.prototype.slice.call(this._arr || this, 0) };
 };
 function base64Slice(buf, start, end) {
@@ -8453,14 +8453,14 @@ function decodeCodePointsArray(codePoints) {
 function asciiSlice(buf, start, end) {
   let ret = "";
   end = Math.min(buf.length, end);
-  for (let i2 = start; i2 < end; ++i2)
+  for (let i2 = start;i2 < end; ++i2)
     ret += String.fromCharCode(buf[i2] & 127);
   return ret;
 }
 function latin1Slice(buf, start, end) {
   let ret = "";
   end = Math.min(buf.length, end);
-  for (let i2 = start; i2 < end; ++i2)
+  for (let i2 = start;i2 < end; ++i2)
     ret += String.fromCharCode(buf[i2]);
   return ret;
 }
@@ -8471,17 +8471,17 @@ function hexSlice(buf, start, end) {
   if (!end || end < 0 || end > len2)
     end = len2;
   let out = "";
-  for (let i2 = start; i2 < end; ++i2)
+  for (let i2 = start;i2 < end; ++i2)
     out += hexSliceLookupTable[buf[i2]];
   return out;
 }
 function utf16leSlice(buf, start, end) {
   let bytes = buf.slice(start, end), res = "";
-  for (let i2 = 0; i2 < bytes.length - 1; i2 += 2)
+  for (let i2 = 0;i2 < bytes.length - 1; i2 += 2)
     res += String.fromCharCode(bytes[i2] + bytes[i2 + 1] * 256);
   return res;
 }
-Buffer.prototype.slice = function (start, end) {
+Buffer.prototype.slice = function(start, end) {
   let len2 = this.length;
   if (start = ~~start, end = end === undefined ? len2 : ~~end, start < 0) {
     if (start += len2, start < 0)
@@ -8504,7 +8504,7 @@ function checkOffset(offset, ext, length) {
   if (offset + ext > length)
     throw RangeError("Trying to access beyond buffer length");
 }
-Buffer.prototype.readUintLE = Buffer.prototype.readUIntLE = function (offset, byteLength2, noAssert) {
+Buffer.prototype.readUintLE = Buffer.prototype.readUIntLE = function(offset, byteLength2, noAssert) {
   if (offset = offset >>> 0, byteLength2 = byteLength2 >>> 0, !noAssert)
     checkOffset(offset, byteLength2, this.length);
   let val = this[offset], mul = 1, i2 = 0;
@@ -8512,7 +8512,7 @@ Buffer.prototype.readUintLE = Buffer.prototype.readUIntLE = function (offset, by
     val += this[offset + i2] * mul;
   return val;
 };
-Buffer.prototype.readUintBE = Buffer.prototype.readUIntBE = function (offset, byteLength2, noAssert) {
+Buffer.prototype.readUintBE = Buffer.prototype.readUIntBE = function(offset, byteLength2, noAssert) {
   if (offset = offset >>> 0, byteLength2 = byteLength2 >>> 0, !noAssert)
     checkOffset(offset, byteLength2, this.length);
   let val = this[offset + --byteLength2], mul = 1;
@@ -8520,32 +8520,32 @@ Buffer.prototype.readUintBE = Buffer.prototype.readUIntBE = function (offset, by
     val += this[offset + --byteLength2] * mul;
   return val;
 };
-Buffer.prototype.readUint8 = Buffer.prototype.readUInt8 = function (offset, noAssert) {
+Buffer.prototype.readUint8 = Buffer.prototype.readUInt8 = function(offset, noAssert) {
   if (offset = offset >>> 0, !noAssert)
     checkOffset(offset, 1, this.length);
   return this[offset];
 };
-Buffer.prototype.readUint16LE = Buffer.prototype.readUInt16LE = function (offset, noAssert) {
+Buffer.prototype.readUint16LE = Buffer.prototype.readUInt16LE = function(offset, noAssert) {
   if (offset = offset >>> 0, !noAssert)
     checkOffset(offset, 2, this.length);
   return this[offset] | this[offset + 1] << 8;
 };
-Buffer.prototype.readUint16BE = Buffer.prototype.readUInt16BE = function (offset, noAssert) {
+Buffer.prototype.readUint16BE = Buffer.prototype.readUInt16BE = function(offset, noAssert) {
   if (offset = offset >>> 0, !noAssert)
     checkOffset(offset, 2, this.length);
   return this[offset] << 8 | this[offset + 1];
 };
-Buffer.prototype.readUint32LE = Buffer.prototype.readUInt32LE = function (offset, noAssert) {
+Buffer.prototype.readUint32LE = Buffer.prototype.readUInt32LE = function(offset, noAssert) {
   if (offset = offset >>> 0, !noAssert)
     checkOffset(offset, 4, this.length);
   return (this[offset] | this[offset + 1] << 8 | this[offset + 2] << 16) + this[offset + 3] * 16777216;
 };
-Buffer.prototype.readUint32BE = Buffer.prototype.readUInt32BE = function (offset, noAssert) {
+Buffer.prototype.readUint32BE = Buffer.prototype.readUInt32BE = function(offset, noAssert) {
   if (offset = offset >>> 0, !noAssert)
     checkOffset(offset, 4, this.length);
   return this[offset] * 16777216 + (this[offset + 1] << 16 | this[offset + 2] << 8 | this[offset + 3]);
 };
-Buffer.prototype.readBigUInt64LE = defineBigIntMethod(function (offset) {
+Buffer.prototype.readBigUInt64LE = defineBigIntMethod(function(offset) {
   offset = offset >>> 0, validateNumber(offset, "offset");
   let first = this[offset], last = this[offset + 7];
   if (first === undefined || last === undefined)
@@ -8553,7 +8553,7 @@ Buffer.prototype.readBigUInt64LE = defineBigIntMethod(function (offset) {
   let lo = first + this[++offset] * 256 + this[++offset] * 65536 + this[++offset] * 16777216, hi = this[++offset] + this[++offset] * 256 + this[++offset] * 65536 + last * 16777216;
   return BigInt(lo) + (BigInt(hi) << BigInt(32));
 });
-Buffer.prototype.readBigUInt64BE = defineBigIntMethod(function (offset) {
+Buffer.prototype.readBigUInt64BE = defineBigIntMethod(function(offset) {
   offset = offset >>> 0, validateNumber(offset, "offset");
   let first = this[offset], last = this[offset + 7];
   if (first === undefined || last === undefined)
@@ -8561,7 +8561,7 @@ Buffer.prototype.readBigUInt64BE = defineBigIntMethod(function (offset) {
   let hi = first * 16777216 + this[++offset] * 65536 + this[++offset] * 256 + this[++offset], lo = this[++offset] * 16777216 + this[++offset] * 65536 + this[++offset] * 256 + last;
   return (BigInt(hi) << BigInt(32)) + BigInt(lo);
 });
-Buffer.prototype.readIntLE = function (offset, byteLength2, noAssert) {
+Buffer.prototype.readIntLE = function(offset, byteLength2, noAssert) {
   if (offset = offset >>> 0, byteLength2 = byteLength2 >>> 0, !noAssert)
     checkOffset(offset, byteLength2, this.length);
   let val = this[offset], mul = 1, i2 = 0;
@@ -8571,7 +8571,7 @@ Buffer.prototype.readIntLE = function (offset, byteLength2, noAssert) {
     val -= Math.pow(2, 8 * byteLength2);
   return val;
 };
-Buffer.prototype.readIntBE = function (offset, byteLength2, noAssert) {
+Buffer.prototype.readIntBE = function(offset, byteLength2, noAssert) {
   if (offset = offset >>> 0, byteLength2 = byteLength2 >>> 0, !noAssert)
     checkOffset(offset, byteLength2, this.length);
   let i2 = byteLength2, mul = 1, val = this[offset + --i2];
@@ -8581,36 +8581,36 @@ Buffer.prototype.readIntBE = function (offset, byteLength2, noAssert) {
     val -= Math.pow(2, 8 * byteLength2);
   return val;
 };
-Buffer.prototype.readInt8 = function (offset, noAssert) {
+Buffer.prototype.readInt8 = function(offset, noAssert) {
   if (offset = offset >>> 0, !noAssert)
     checkOffset(offset, 1, this.length);
   if (!(this[offset] & 128))
     return this[offset];
   return (255 - this[offset] + 1) * -1;
 };
-Buffer.prototype.readInt16LE = function (offset, noAssert) {
+Buffer.prototype.readInt16LE = function(offset, noAssert) {
   if (offset = offset >>> 0, !noAssert)
     checkOffset(offset, 2, this.length);
   let val = this[offset] | this[offset + 1] << 8;
   return val & 32768 ? val | 4294901760 : val;
 };
-Buffer.prototype.readInt16BE = function (offset, noAssert) {
+Buffer.prototype.readInt16BE = function(offset, noAssert) {
   if (offset = offset >>> 0, !noAssert)
     checkOffset(offset, 2, this.length);
   let val = this[offset + 1] | this[offset] << 8;
   return val & 32768 ? val | 4294901760 : val;
 };
-Buffer.prototype.readInt32LE = function (offset, noAssert) {
+Buffer.prototype.readInt32LE = function(offset, noAssert) {
   if (offset = offset >>> 0, !noAssert)
     checkOffset(offset, 4, this.length);
   return this[offset] | this[offset + 1] << 8 | this[offset + 2] << 16 | this[offset + 3] << 24;
 };
-Buffer.prototype.readInt32BE = function (offset, noAssert) {
+Buffer.prototype.readInt32BE = function(offset, noAssert) {
   if (offset = offset >>> 0, !noAssert)
     checkOffset(offset, 4, this.length);
   return this[offset] << 24 | this[offset + 1] << 16 | this[offset + 2] << 8 | this[offset + 3];
 };
-Buffer.prototype.readBigInt64LE = defineBigIntMethod(function (offset) {
+Buffer.prototype.readBigInt64LE = defineBigIntMethod(function(offset) {
   offset = offset >>> 0, validateNumber(offset, "offset");
   let first = this[offset], last = this[offset + 7];
   if (first === undefined || last === undefined)
@@ -8618,7 +8618,7 @@ Buffer.prototype.readBigInt64LE = defineBigIntMethod(function (offset) {
   let val = this[offset + 4] + this[offset + 5] * 256 + this[offset + 6] * 65536 + (last << 24);
   return (BigInt(val) << BigInt(32)) + BigInt(first + this[++offset] * 256 + this[++offset] * 65536 + this[++offset] * 16777216);
 });
-Buffer.prototype.readBigInt64BE = defineBigIntMethod(function (offset) {
+Buffer.prototype.readBigInt64BE = defineBigIntMethod(function(offset) {
   offset = offset >>> 0, validateNumber(offset, "offset");
   let first = this[offset], last = this[offset + 7];
   if (first === undefined || last === undefined)
@@ -8626,22 +8626,22 @@ Buffer.prototype.readBigInt64BE = defineBigIntMethod(function (offset) {
   let val = (first << 24) + this[++offset] * 65536 + this[++offset] * 256 + this[++offset];
   return (BigInt(val) << BigInt(32)) + BigInt(this[++offset] * 16777216 + this[++offset] * 65536 + this[++offset] * 256 + last);
 });
-Buffer.prototype.readFloatLE = function (offset, noAssert) {
+Buffer.prototype.readFloatLE = function(offset, noAssert) {
   if (offset = offset >>> 0, !noAssert)
     checkOffset(offset, 4, this.length);
   return read(this, offset, true, 23, 4);
 };
-Buffer.prototype.readFloatBE = function (offset, noAssert) {
+Buffer.prototype.readFloatBE = function(offset, noAssert) {
   if (offset = offset >>> 0, !noAssert)
     checkOffset(offset, 4, this.length);
   return read(this, offset, false, 23, 4);
 };
-Buffer.prototype.readDoubleLE = function (offset, noAssert) {
+Buffer.prototype.readDoubleLE = function(offset, noAssert) {
   if (offset = offset >>> 0, !noAssert)
     checkOffset(offset, 8, this.length);
   return read(this, offset, true, 52, 8);
 };
-Buffer.prototype.readDoubleBE = function (offset, noAssert) {
+Buffer.prototype.readDoubleBE = function(offset, noAssert) {
   if (offset = offset >>> 0, !noAssert)
     checkOffset(offset, 8, this.length);
   return read(this, offset, false, 52, 8);
@@ -8654,7 +8654,7 @@ function checkInt(buf, value, offset, ext, max, min) {
   if (offset + ext > buf.length)
     throw RangeError("Index out of range");
 }
-Buffer.prototype.writeUintLE = Buffer.prototype.writeUIntLE = function (value, offset, byteLength2, noAssert) {
+Buffer.prototype.writeUintLE = Buffer.prototype.writeUIntLE = function(value, offset, byteLength2, noAssert) {
   if (value = +value, offset = offset >>> 0, byteLength2 = byteLength2 >>> 0, !noAssert) {
     let maxBytes = Math.pow(2, 8 * byteLength2) - 1;
     checkInt(this, value, offset, byteLength2, maxBytes, 0);
@@ -8665,7 +8665,7 @@ Buffer.prototype.writeUintLE = Buffer.prototype.writeUIntLE = function (value, o
     this[offset + i2] = value / mul & 255;
   return offset + byteLength2;
 };
-Buffer.prototype.writeUintBE = Buffer.prototype.writeUIntBE = function (value, offset, byteLength2, noAssert) {
+Buffer.prototype.writeUintBE = Buffer.prototype.writeUIntBE = function(value, offset, byteLength2, noAssert) {
   if (value = +value, offset = offset >>> 0, byteLength2 = byteLength2 >>> 0, !noAssert) {
     let maxBytes = Math.pow(2, 8 * byteLength2) - 1;
     checkInt(this, value, offset, byteLength2, maxBytes, 0);
@@ -8676,27 +8676,27 @@ Buffer.prototype.writeUintBE = Buffer.prototype.writeUIntBE = function (value, o
     this[offset + i2] = value / mul & 255;
   return offset + byteLength2;
 };
-Buffer.prototype.writeUint8 = Buffer.prototype.writeUInt8 = function (value, offset, noAssert) {
+Buffer.prototype.writeUint8 = Buffer.prototype.writeUInt8 = function(value, offset, noAssert) {
   if (value = +value, offset = offset >>> 0, !noAssert)
     checkInt(this, value, offset, 1, 255, 0);
   return this[offset] = value & 255, offset + 1;
 };
-Buffer.prototype.writeUint16LE = Buffer.prototype.writeUInt16LE = function (value, offset, noAssert) {
+Buffer.prototype.writeUint16LE = Buffer.prototype.writeUInt16LE = function(value, offset, noAssert) {
   if (value = +value, offset = offset >>> 0, !noAssert)
     checkInt(this, value, offset, 2, 65535, 0);
   return this[offset] = value & 255, this[offset + 1] = value >>> 8, offset + 2;
 };
-Buffer.prototype.writeUint16BE = Buffer.prototype.writeUInt16BE = function (value, offset, noAssert) {
+Buffer.prototype.writeUint16BE = Buffer.prototype.writeUInt16BE = function(value, offset, noAssert) {
   if (value = +value, offset = offset >>> 0, !noAssert)
     checkInt(this, value, offset, 2, 65535, 0);
   return this[offset] = value >>> 8, this[offset + 1] = value & 255, offset + 2;
 };
-Buffer.prototype.writeUint32LE = Buffer.prototype.writeUInt32LE = function (value, offset, noAssert) {
+Buffer.prototype.writeUint32LE = Buffer.prototype.writeUInt32LE = function(value, offset, noAssert) {
   if (value = +value, offset = offset >>> 0, !noAssert)
     checkInt(this, value, offset, 4, 4294967295, 0);
   return this[offset + 3] = value >>> 24, this[offset + 2] = value >>> 16, this[offset + 1] = value >>> 8, this[offset] = value & 255, offset + 4;
 };
-Buffer.prototype.writeUint32BE = Buffer.prototype.writeUInt32BE = function (value, offset, noAssert) {
+Buffer.prototype.writeUint32BE = Buffer.prototype.writeUInt32BE = function(value, offset, noAssert) {
   if (value = +value, offset = offset >>> 0, !noAssert)
     checkInt(this, value, offset, 4, 4294967295, 0);
   return this[offset] = value >>> 24, this[offset + 1] = value >>> 16, this[offset + 2] = value >>> 8, this[offset + 3] = value & 255, offset + 4;
@@ -8715,13 +8715,13 @@ function wrtBigUInt64BE(buf, value, offset, min, max) {
   let hi = Number(value >> BigInt(32) & BigInt(4294967295));
   return buf[offset + 3] = hi, hi = hi >> 8, buf[offset + 2] = hi, hi = hi >> 8, buf[offset + 1] = hi, hi = hi >> 8, buf[offset] = hi, offset + 8;
 }
-Buffer.prototype.writeBigUInt64LE = defineBigIntMethod(function (value, offset = 0) {
+Buffer.prototype.writeBigUInt64LE = defineBigIntMethod(function(value, offset = 0) {
   return wrtBigUInt64LE(this, value, offset, BigInt(0), BigInt("0xffffffffffffffff"));
 });
-Buffer.prototype.writeBigUInt64BE = defineBigIntMethod(function (value, offset = 0) {
+Buffer.prototype.writeBigUInt64BE = defineBigIntMethod(function(value, offset = 0) {
   return wrtBigUInt64BE(this, value, offset, BigInt(0), BigInt("0xffffffffffffffff"));
 });
-Buffer.prototype.writeIntLE = function (value, offset, byteLength2, noAssert) {
+Buffer.prototype.writeIntLE = function(value, offset, byteLength2, noAssert) {
   if (value = +value, offset = offset >>> 0, !noAssert) {
     let limit = Math.pow(2, 8 * byteLength2 - 1);
     checkInt(this, value, offset, byteLength2, limit - 1, -limit);
@@ -8735,7 +8735,7 @@ Buffer.prototype.writeIntLE = function (value, offset, byteLength2, noAssert) {
   }
   return offset + byteLength2;
 };
-Buffer.prototype.writeIntBE = function (value, offset, byteLength2, noAssert) {
+Buffer.prototype.writeIntBE = function(value, offset, byteLength2, noAssert) {
   if (value = +value, offset = offset >>> 0, !noAssert) {
     let limit = Math.pow(2, 8 * byteLength2 - 1);
     checkInt(this, value, offset, byteLength2, limit - 1, -limit);
@@ -8749,39 +8749,39 @@ Buffer.prototype.writeIntBE = function (value, offset, byteLength2, noAssert) {
   }
   return offset + byteLength2;
 };
-Buffer.prototype.writeInt8 = function (value, offset, noAssert) {
+Buffer.prototype.writeInt8 = function(value, offset, noAssert) {
   if (value = +value, offset = offset >>> 0, !noAssert)
     checkInt(this, value, offset, 1, 127, -128);
   if (value < 0)
     value = 255 + value + 1;
   return this[offset] = value & 255, offset + 1;
 };
-Buffer.prototype.writeInt16LE = function (value, offset, noAssert) {
+Buffer.prototype.writeInt16LE = function(value, offset, noAssert) {
   if (value = +value, offset = offset >>> 0, !noAssert)
     checkInt(this, value, offset, 2, 32767, -32768);
   return this[offset] = value & 255, this[offset + 1] = value >>> 8, offset + 2;
 };
-Buffer.prototype.writeInt16BE = function (value, offset, noAssert) {
+Buffer.prototype.writeInt16BE = function(value, offset, noAssert) {
   if (value = +value, offset = offset >>> 0, !noAssert)
     checkInt(this, value, offset, 2, 32767, -32768);
   return this[offset] = value >>> 8, this[offset + 1] = value & 255, offset + 2;
 };
-Buffer.prototype.writeInt32LE = function (value, offset, noAssert) {
+Buffer.prototype.writeInt32LE = function(value, offset, noAssert) {
   if (value = +value, offset = offset >>> 0, !noAssert)
     checkInt(this, value, offset, 4, 2147483647, -2147483648);
   return this[offset] = value & 255, this[offset + 1] = value >>> 8, this[offset + 2] = value >>> 16, this[offset + 3] = value >>> 24, offset + 4;
 };
-Buffer.prototype.writeInt32BE = function (value, offset, noAssert) {
+Buffer.prototype.writeInt32BE = function(value, offset, noAssert) {
   if (value = +value, offset = offset >>> 0, !noAssert)
     checkInt(this, value, offset, 4, 2147483647, -2147483648);
   if (value < 0)
     value = 4294967295 + value + 1;
   return this[offset] = value >>> 24, this[offset + 1] = value >>> 16, this[offset + 2] = value >>> 8, this[offset + 3] = value & 255, offset + 4;
 };
-Buffer.prototype.writeBigInt64LE = defineBigIntMethod(function (value, offset = 0) {
+Buffer.prototype.writeBigInt64LE = defineBigIntMethod(function(value, offset = 0) {
   return wrtBigUInt64LE(this, value, offset, -BigInt("0x8000000000000000"), BigInt("0x7fffffffffffffff"));
 });
-Buffer.prototype.writeBigInt64BE = defineBigIntMethod(function (value, offset = 0) {
+Buffer.prototype.writeBigInt64BE = defineBigIntMethod(function(value, offset = 0) {
   return wrtBigUInt64BE(this, value, offset, -BigInt("0x8000000000000000"), BigInt("0x7fffffffffffffff"));
 });
 function checkIEEE754(buf, value, offset, ext, max, min) {
@@ -8795,10 +8795,10 @@ function writeFloat(buf, value, offset, littleEndian, noAssert) {
     checkIEEE754(buf, value, offset, 4, 340282346638528860000000000000000000000, -340282346638528860000000000000000000000);
   return write(buf, value, offset, littleEndian, 23, 4), offset + 4;
 }
-Buffer.prototype.writeFloatLE = function (value, offset, noAssert) {
+Buffer.prototype.writeFloatLE = function(value, offset, noAssert) {
   return writeFloat(this, value, offset, true, noAssert);
 };
-Buffer.prototype.writeFloatBE = function (value, offset, noAssert) {
+Buffer.prototype.writeFloatBE = function(value, offset, noAssert) {
   return writeFloat(this, value, offset, false, noAssert);
 };
 function writeDouble(buf, value, offset, littleEndian, noAssert) {
@@ -8806,13 +8806,13 @@ function writeDouble(buf, value, offset, littleEndian, noAssert) {
     checkIEEE754(buf, value, offset, 8, 179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000, -179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000);
   return write(buf, value, offset, littleEndian, 52, 8), offset + 8;
 }
-Buffer.prototype.writeDoubleLE = function (value, offset, noAssert) {
+Buffer.prototype.writeDoubleLE = function(value, offset, noAssert) {
   return writeDouble(this, value, offset, true, noAssert);
 };
-Buffer.prototype.writeDoubleBE = function (value, offset, noAssert) {
+Buffer.prototype.writeDoubleBE = function(value, offset, noAssert) {
   return writeDouble(this, value, offset, false, noAssert);
 };
-Buffer.prototype.copy = function (target, targetStart, start, end) {
+Buffer.prototype.copy = function(target, targetStart, start, end) {
   if (!Buffer.isBuffer(target))
     throw TypeError("argument should be a Buffer");
   if (!start)
@@ -8846,7 +8846,7 @@ Buffer.prototype.copy = function (target, targetStart, start, end) {
     Uint8Array.prototype.set.call(target, this.subarray(start, end), targetStart);
   return len2;
 };
-Buffer.prototype.fill = function (val, start, end, encoding) {
+Buffer.prototype.fill = function(val, start, end, encoding) {
   if (typeof val === "string") {
     if (typeof start === "string")
       encoding = start, start = 0, end = this.length;
@@ -8873,20 +8873,20 @@ Buffer.prototype.fill = function (val, start, end, encoding) {
     val = 0;
   let i2;
   if (typeof val === "number")
-    for (i2 = start; i2 < end; ++i2)
+    for (i2 = start;i2 < end; ++i2)
       this[i2] = val;
   else {
     let bytes = Buffer.isBuffer(val) ? val : Buffer.from(val, encoding), len2 = bytes.length;
     if (len2 === 0)
       throw TypeError('The value "' + val + '" is invalid for argument "value"');
-    for (i2 = 0; i2 < end - start; ++i2)
+    for (i2 = 0;i2 < end - start; ++i2)
       this[i2 + start] = bytes[i2 % len2];
   }
   return this;
 };
 function addNumericalSeparator(val) {
   let res = "", i2 = val.length, start = val[0] === "-" ? 1 : 0;
-  for (; i2 >= start + 4; i2 -= 3)
+  for (;i2 >= start + 4; i2 -= 3)
     res = `_${val.slice(i2 - 3, i2)}${res}`;
   return `${val.slice(0, i2)}${res}`;
 }
@@ -8930,7 +8930,7 @@ function base64clean(str) {
 function utf8ToBytes(string, units) {
   units = units || 1 / 0;
   let codePoint, length = string.length, leadSurrogate = null, bytes = [];
-  for (let i2 = 0; i2 < length; ++i2) {
+  for (let i2 = 0;i2 < length; ++i2) {
     if (codePoint = string.charCodeAt(i2), codePoint > 55295 && codePoint < 57344) {
       if (!leadSurrogate) {
         if (codePoint > 56319) {
@@ -8979,13 +8979,13 @@ function utf8ToBytes(string, units) {
 }
 function asciiToBytes(str) {
   let byteArray = [];
-  for (let i2 = 0; i2 < str.length; ++i2)
+  for (let i2 = 0;i2 < str.length; ++i2)
     byteArray.push(str.charCodeAt(i2) & 255);
   return byteArray;
 }
 function utf16leToBytes(str, units) {
   let c, hi, lo, byteArray = [];
-  for (let i2 = 0; i2 < str.length; ++i2) {
+  for (let i2 = 0;i2 < str.length; ++i2) {
     if ((units -= 2) < 0)
       break;
     c = str.charCodeAt(i2), hi = c >> 8, lo = c % 256, byteArray.push(lo), byteArray.push(hi);
@@ -8997,7 +8997,7 @@ function base64ToBytes(str) {
 }
 function blitBuffer(src, dst, offset, length) {
   let i2;
-  for (i2 = 0; i2 < length; ++i2) {
+  for (i2 = 0;i2 < length; ++i2) {
     if (i2 + offset >= dst.length || i2 >= src.length)
       break;
     dst[i2 + offset] = src[i2];
@@ -9007,11 +9007,11 @@ function blitBuffer(src, dst, offset, length) {
 function isInstance(obj, type) {
   return obj instanceof type || obj != null && obj.constructor != null && obj.constructor.name != null && obj.constructor.name === type.name;
 }
-var hexSliceLookupTable = function () {
+var hexSliceLookupTable = function() {
   let table = Array(256);
-  for (let i2 = 0; i2 < 16; ++i2) {
+  for (let i2 = 0;i2 < 16; ++i2) {
     let i16 = i2 * 16;
-    for (let j = 0; j < 16; ++j)
+    for (let j = 0;j < 16; ++j)
       table[i16 + j] = "0123456789abcdef"[i2] + "0123456789abcdef"[j];
   }
   return table;
@@ -9623,7 +9623,7 @@ function computeModel(classes) {
       if (javaConstructors.has(klass.name)) {
         let superConstructor = -1;
         const numMethodItems = methodItems.length;
-        for (let i2 = 0; i2 !== numMethodItems; i2++) {
+        for (let i2 = 0;i2 !== numMethodItems; i2++) {
           const [methodClass, methodProto, methodName] = methodItems[i2];
           if (methodClass === superClassIndex && methodName === constructorNameIndex && methodProto === protoIndex) {
             superConstructor = i2;
@@ -9758,7 +9758,7 @@ function adler32(buffer, offset) {
   let a = 1;
   let b = 0;
   const length = buffer.length;
-  for (let i2 = offset; i2 < length; i2++) {
+  for (let i2 = offset;i2 < length; i2++) {
     a = (a + buffer[i2]) % 65521;
     b = (b + a) % 65521;
   }
@@ -10186,7 +10186,7 @@ function getArrayType(typeName, unbox, factory) {
       if (typeof v !== "object" || v.length === undefined) {
         return false;
       }
-      return v.every(function (element) {
+      return v.every(function(element) {
         return elementType.isCompatible(element);
       });
     },
@@ -10196,7 +10196,7 @@ function getArrayType(typeName, unbox, factory) {
       }
       const result = [];
       const n = env.getArrayLength(arr);
-      for (let i2 = 0; i2 !== n; i2++) {
+      for (let i2 = 0;i2 !== n; i2++) {
         const element = env.getObjectArrayElement(arr, i2);
         try {
           result.push(elementType.fromJni(element, env));
@@ -10230,7 +10230,7 @@ function getArrayType(typeName, unbox, factory) {
       try {
         const result = env.newObjectArray(n, classHandle.value, NULL);
         env.throwIfExceptionPending();
-        for (let i2 = 0; i2 !== n; i2++) {
+        for (let i2 = 0;i2 !== n; i2++) {
           const handle = elementType.toJni(elements[i2], env);
           try {
             env.setObjectArrayElement(result, i2, handle);
@@ -10250,7 +10250,7 @@ function getArrayType(typeName, unbox, factory) {
 }
 function disposeObjectArray() {
   const n = this.length;
-  for (let i2 = 0; i2 !== n; i2++) {
+  for (let i2 = 0;i2 !== n; i2++) {
     const obj = this[i2];
     if (obj === null) {
       continue;
@@ -10290,7 +10290,7 @@ function toJniPrimitiveArray(arr, spec, env) {
     const writeElement = type.write;
     const unparseElementValue = type.toJni;
     const elements = Memory.alloc(length * type.byteSize);
-    for (let index = 0; index !== length; index++) {
+    for (let index = 0;index !== length; index++) {
       writeElement(elements.add(index * elementSize), unparseElementValue(arr[index]));
     }
     spec.setRegion.call(env, result, 0, length, elements);
@@ -10352,7 +10352,7 @@ primitiveArrayHandler = {
   ownKeys(target) {
     const keys = [];
     const { length } = target;
-    for (let i2 = 0; i2 !== length; i2++) {
+    for (let i2 = 0;i2 !== length; i2++) {
       const key = i2.toString();
       keys.push(key);
     }
@@ -10437,7 +10437,7 @@ Object.defineProperties(PrimitiveArray.prototype, {
       const { byteSize: elementSize, fromJni, read: read2 } = type;
       return this.withElements((elements) => {
         const values = [];
-        for (let i2 = 0; i2 !== length; i2++) {
+        for (let i2 = 0;i2 !== length; i2++) {
           const value = fromJni(read2(elements.add(i2 * elementSize)));
           values.push(value);
         }
@@ -10946,7 +10946,7 @@ class ClassFactory {
       const count = countPtr.readS32();
       const objects = objectsPtr.readPointer();
       const handles = [];
-      for (let i2 = 0; i2 !== count; i2++) {
+      for (let i2 = 0;i2 !== count; i2++) {
         handles.push(objects.add(i2 * pointerSize7).readPointer());
       }
       jvmti.deallocate(objects);
@@ -11068,7 +11068,7 @@ class ClassFactory {
           });
           return "stop";
         },
-        onError(reason) { },
+        onError(reason) {},
         onComplete() {
           if (api.addLocalReference === null) {
             callbacks.onComplete();
@@ -11111,7 +11111,7 @@ class ClassFactory {
             });
           }
         },
-        onError(reason) { },
+        onError(reason) {},
         onComplete() {
           callbacks.onComplete();
         }
@@ -11126,7 +11126,7 @@ class ClassFactory {
   }
 }
 function makeClassWrapperConstructor() {
-  return function (handle, strategy, env, owned) {
+  return function(handle, strategy, env, owned) {
     return Wrapper.call(this, handle, strategy, env, owned);
   };
 }
@@ -11543,11 +11543,11 @@ function ClassHandle(value, env) {
   env.deleteLocalRef(value);
   this.refs = 1;
 }
-ClassHandle.prototype.ref = function () {
+ClassHandle.prototype.ref = function() {
   this.refs++;
   return this;
 };
-ClassHandle.prototype.unref = function (env) {
+ClassHandle.prototype.unref = function(env) {
   if (--this.refs === 0) {
     env.deleteGlobalRef(this.value);
   }
@@ -11557,7 +11557,7 @@ function releaseClassHandle(handle, env) {
 }
 function makeBasicClassHandleGetter(className) {
   const canonicalClassName = className.replace(/\./g, "/");
-  return function (env) {
+  return function(env) {
     const tid = getCurrentThreadId();
     ignore(tid);
     try {
@@ -11573,7 +11573,7 @@ function makeLoaderClassHandleGetter(className, usedLoader, callerEnv) {
     cachedLoaderMethod = usedLoader.loadClass.overload("java.lang.String").handle;
   }
   callerEnv = null;
-  return function (env) {
+  return function(env) {
     const classNameValue = env.newStringUtf(className);
     const tid = getCurrentThreadId();
     ignore(tid);
@@ -11588,7 +11588,7 @@ function makeLoaderClassHandleGetter(className, usedLoader, callerEnv) {
   };
 }
 function makeSuperHandleGetter(classWrapper) {
-  return function (env) {
+  return function(env) {
     const h = classWrapper.$borrowClassHandle(env);
     try {
       return env.getSuperclass(h.value);
@@ -11612,7 +11612,7 @@ function makeConstructor(classHandle, classWrapper, env) {
   try {
     const n = env.getArrayLength(constructors);
     if (n !== 0) {
-      for (let i2 = 0; i2 !== n; i2++) {
+      for (let i2 = 0;i2 !== n; i2++) {
         let methodId, types;
         const constructor = env.getObjectArrayElement(constructors, i2);
         try {
@@ -11681,7 +11681,7 @@ function makeMethodFromSpec(name, spec, classHandle, classWrapper, env) {
       const argTypes = invokeObjectMethodNoArgs(env.handle, handle, Method.getParameterTypes);
       try {
         const n = env.getArrayLength(argTypes);
-        for (let i2 = 0; i2 !== n; i2++) {
+        for (let i2 = 0;i2 !== n; i2++) {
           const t = env.getObjectArrayElement(argTypes, i2);
           let argClassName;
           try {
@@ -11709,7 +11709,7 @@ function makeMethodFromSpec(name, spec, classHandle, classWrapper, env) {
     ensureDefaultValueOfImplemented(methods);
   }
   const result = makeMethodDispatcher(methods);
-  return function (receiver) {
+  return function(receiver) {
     return result;
   };
 }
@@ -11720,7 +11720,7 @@ function makeMethodDispatcher(overloads) {
   return m;
 }
 function makeMethodDispatcherCallable() {
-  const m = function () {
+  const m = function() {
     return m.invoke(this, arguments);
   };
   return m;
@@ -11737,7 +11737,7 @@ dispatcherPrototype = Object.create(Function.prototype, {
       const overloads = this._o;
       const numArgs = args.length;
       const signature = args.join(":");
-      for (let i2 = 0; i2 !== overloads.length; i2++) {
+      for (let i2 = 0;i2 !== overloads.length; i2++) {
         const method = overloads[i2];
         const { argumentTypes } = method;
         if (argumentTypes.length !== numArgs) {
@@ -11819,7 +11819,7 @@ dispatcherPrototype = Object.create(Function.prototype, {
     value(receiver, args) {
       const overloads = this._o;
       const isInstance2 = receiver.$h !== null;
-      for (let i2 = 0; i2 !== overloads.length; i2++) {
+      for (let i2 = 0;i2 !== overloads.length; i2++) {
         const method = overloads[i2];
         if (!method.canInvokeWith(args)) {
           continue;
@@ -11889,7 +11889,7 @@ function makeMethodInstance(params) {
   return m;
 }
 function makeMethodCallable() {
-  const m = function () {
+  const m = function() {
     return m.invoke(this, arguments);
   };
   return m;
@@ -12021,7 +12021,7 @@ methodPrototype = Object.create(Function.prototype, {
           jniThis,
           methodId
         ];
-        for (let i2 = 0; i2 !== numArgs; i2++) {
+        for (let i2 = 0;i2 !== numArgs; i2++) {
           jniArgs.push(argTypes[i2].toJni(args[i2], env));
         }
         let jniCall;
@@ -12059,7 +12059,7 @@ function implement(methodName, classWrapper, type, retType, argTypes, handler, f
   return impl;
 }
 function makeMethodImplementation(params) {
-  return function () {
+  return function() {
     return handleMethodInvocation(arguments, params);
   };
 }
@@ -12088,7 +12088,7 @@ function handleMethodInvocation(jniArgs, params) {
     }
     const args = [];
     const numArgs = jniArgs.length - 2;
-    for (let i2 = 0; i2 !== numArgs; i2++) {
+    for (let i2 = 0;i2 !== numArgs; i2++) {
       const t = argTypes[i2];
       const value = t.fromJni(jniArgs[2 + i2], env, false);
       args.push(value);
@@ -12147,7 +12147,7 @@ function makeValueOfMethod(params) {
   return m;
 }
 function makeValueOfCallable() {
-  const m = function () {
+  const m = function() {
     return this;
   };
   return m;
@@ -12182,7 +12182,7 @@ valueOfPrototype = Object.create(Function.prototype, {
     get() {
       return null;
     },
-    set(fn) { }
+    set(fn) {}
   },
   returnType: {
     enumerable: true,
@@ -12240,7 +12240,7 @@ function makeFieldFromSpec(name, spec, classHandle, classWrapper, env) {
   return makeFieldFromParams([type, rtype, id, getValue, setValue]);
 }
 function makeFieldFromParams(params) {
-  return function (receiver) {
+  return function(receiver) {
     return new Field([receiver].concat(params));
   };
 }
@@ -12429,7 +12429,7 @@ function addFactoryToCache(factory, loader) {
   const { factories, loaders, Integer } = factoryCache;
   const index = Integer.$new(factories.indexOf(factory));
   loaders.put(loader, index);
-  for (let l = loader.getParent(); l !== null; l = l.getParent()) {
+  for (let l = loader.getParent();l !== null; l = l.getParent()) {
     if (loaders.containsKey(l)) {
       break;
     }
@@ -12462,7 +12462,7 @@ function basename(className) {
 function readTypeNames(env, types) {
   const names = [];
   const n = env.getArrayLength(types);
-  for (let i2 = 0; i2 !== n; i2++) {
+  for (let i2 = 0;i2 !== n; i2++) {
     const t = env.getObjectArrayElement(types, i2);
     try {
       names.push(env.getTypeName(t));
@@ -12508,7 +12508,7 @@ class Runtime {
     this._cachedIsAppProcess = null;
     try {
       this._tryInitialize();
-    } catch (e) { }
+    } catch (e) {}
   }
   _tryInitialize() {
     if (this._initialized) {
@@ -12585,7 +12585,7 @@ class Runtime {
       onMatch(c) {
         classes.push(c);
       },
-      onComplete() { }
+      onComplete() {}
     });
     return classes;
   }
@@ -12606,7 +12606,7 @@ class Runtime {
       onMatch(c) {
         loaders.push(c);
       },
-      onComplete() { }
+      onComplete() {}
     });
     return loaders;
   }
@@ -12620,7 +12620,7 @@ class Runtime {
     const count = countPtr.readS32();
     const classes = classesPtr.readPointer();
     const handles = [];
-    for (let i2 = 0; i2 !== count; i2++) {
+    for (let i2 = 0;i2 !== count; i2++) {
       handles.push(classes.add(i2 * pointerSize8).readPointer());
     }
     jvmti.deallocate(classes);
@@ -12702,7 +12702,7 @@ class Runtime {
     const ptrpEntries = hashTable.add(12);
     const pEntries = ptrpEntries.readPointer();
     const end = tableSize * hashEntrySize;
-    for (let offset = 0; offset < end; offset += hashEntrySize) {
+    for (let offset = 0;offset < end; offset += hashEntrySize) {
       const pEntryPtr = pEntries.add(offset);
       const dataPtr = pEntryPtr.add(4).readPointer();
       if (dataPtr.isNull() || dataPtr.equals(HASH_TOMBSTONE)) {
@@ -12748,7 +12748,7 @@ class Runtime {
   _makePollHook() {
     const mainThreadId = Process.id;
     const { _pendingMainOps: pending } = this;
-    return function () {
+    return function() {
       if (this.threadId !== mainThreadId) {
         return;
       }
@@ -12809,12 +12809,12 @@ class Runtime {
       let initialized = false;
       let hookpoint = "early";
       const handleBindApplication = ActivityThread.handleBindApplication;
-      handleBindApplication.implementation = function (data) {
+      handleBindApplication.implementation = function(data) {
         if (data.instrumentationName.value !== null) {
           hookpoint = "late";
           const LoadedApk = factory.use("android.app.LoadedApk");
           const makeApplication = LoadedApk.makeApplication;
-          makeApplication.implementation = function (forceDefaultAppClass, instrumentation) {
+          makeApplication.implementation = function(forceDefaultAppClass, instrumentation) {
             if (!initialized) {
               initialized = true;
               initFactoryFromLoadedApk(factory, this);
@@ -12827,7 +12827,7 @@ class Runtime {
       };
       const getPackageInfoCandidates = ActivityThread.getPackageInfo.overloads.map((m) => [m.argumentTypes.length, m]).sort(([arityA], [arityB]) => arityB - arityA).map(([_, method]) => method);
       const getPackageInfo = getPackageInfoCandidates[0];
-      getPackageInfo.implementation = function (...args) {
+      getPackageInfo.implementation = function(...args) {
         const apk = getPackageInfo.call(this, ...args);
         if (!initialized && hookpoint === "early") {
           initialized = true;
@@ -13040,7 +13040,7 @@ function resolveJidInfo(db, jidRowId, jidType = "person") {
           waDb.close();
         }
       }
-    } catch (dbErr) { }
+    } catch (dbErr) {}
   } catch (e) {
     console.error("[resolveJidInfo] Error: " + e);
   }
@@ -13049,9 +13049,30 @@ function resolveJidInfo(db, jidRowId, jidType = "person") {
 }
 function init(db, initialValues) {
   const Base64 = frida_java_bridge_default.use("android.util.Base64");
+  const ContentValues = frida_java_bridge_default.use("android.content.ContentValues");
   try {
     let messageType = initialValues.getAsInteger("message_type");
     let content = initialValues.getAsString("text_data");
+    let mediaUrl = initialValues.getAsString("media_url");
+    let mediaType = initialValues.getAsString("media_type");
+    console.log("[WA DEBUG] message_type=" + messageType + ", text_data=" + content + ", media_url=" + mediaUrl + ", media_type=" + mediaType);
+    try {
+      var map = initialValues.values;
+      var keySet = map.keySet();
+      var iter = keySet.iterator();
+      var allFields = [];
+      while (iter.hasNext()) {
+        var key = iter.next().toString();
+        var val = map.get(key);
+        var valStr = val ? val.toString() : "null";
+        if (valStr.length > 100)
+          valStr = valStr.substring(0, 100) + "...";
+        allFields.push(key + "=" + valStr);
+      }
+      console.log("[WA DEBUG] ALL FIELDS: {" + allFields.join(", ") + "}");
+    } catch (mapErr) {
+      console.log("[WA DEBUG] Could not access values map: " + mapErr);
+    }
     if (content && (messageType === null || messageType.intValue() === 0)) {
       let fromMe = initialValues.getAsInteger("from_me");
       let timestamp = initialValues.getAsLong("timestamp");
@@ -13088,6 +13109,77 @@ function init(db, initialValues) {
           phone: senderInfo.phone
         },
         content: encodedContent,
+        time: dateStr
+      };
+    }
+    let isImageMessage = messageType && messageType.intValue() === 1 || mediaUrl && mediaUrl.length > 0 && (!mediaType || mediaType.startsWith("image"));
+    if (isImageMessage) {
+      console.log("[WA Image] Detected image message, media_url=" + mediaUrl);
+      let actualMediaUrl = mediaUrl;
+      if (!actualMediaUrl || actualMediaUrl.length === 0) {
+        try {
+          let rowId = initialValues.getAsLong("_id");
+          if (rowId && rowId.longValue() !== 0) {
+            console.log("[WA Image] Trying to fetch media URL from DB for row_id: " + rowId);
+            let cursor = db.rawQuery("SELECT media_url FROM message WHERE _id = ?", frida_java_bridge_default.array("java.lang.Long", [rowId.longValue()]));
+            if (cursor && cursor.moveToFirst()) {
+              let dbMediaUrl = cursor.getString(0);
+              if (dbMediaUrl && dbMediaUrl.length > 0) {
+                actualMediaUrl = dbMediaUrl;
+                console.log("[WA Image] Found media URL in DB: " + actualMediaUrl);
+              }
+            }
+            if (cursor)
+              cursor.close();
+          }
+        } catch (dbErr) {
+          console.log("[WA Image] DB query failed: " + dbErr);
+        }
+      }
+      mediaUrl = actualMediaUrl;
+    }
+    if (isImageMessage && mediaUrl && mediaUrl.length > 0) {
+      let fromMe = initialValues.getAsInteger("from_me");
+      let timestamp = initialValues.getAsLong("timestamp");
+      let chatRowId = initialValues.getAsLong("chat_row_id");
+      let senderJidRowId = initialValues.getAsLong("sender_jid_row_id");
+      let type = fromMe && fromMe.intValue() === 1 ? "OUTGOING" : "INCOMING";
+      let dateStr = new Date(timestamp ? timestamp.longValue() : Date.now()).toLocaleString();
+      let chatInfo = resolveJidInfo(db, chatRowId, "chat");
+      let senderInfo = chatInfo;
+      if (senderJidRowId && senderJidRowId.longValue() !== -1 && senderJidRowId.longValue() !== 0) {
+        console.log("[WA Listener] Resolving Sender JID Row: " + senderJidRowId.toString());
+        let explicitSender = resolveJidInfo(db, senderJidRowId, "person");
+        if (explicitSender && explicitSender.uuid) {
+          senderInfo = explicitSender;
+        } else {
+          console.log("[WA Listener] Failed to resolve sender info for row " + senderJidRowId + ", falling back to chat info.");
+        }
+      } else {
+        console.log("[WA Listener] No valid sender_jid_row_id (" + senderJidRowId + "), using chat info.");
+      }
+      let javaString = frida_java_bridge_default.use("java.lang.String").$new(mediaUrl.toString());
+      let encodedContent = Base64.encodeToString(javaString.getBytes("UTF-8"), 2);
+      let caption = initialValues.getAsString("caption") || "";
+      let encodedCaption = caption ? Base64.encodeToString(frida_java_bridge_default.use("java.lang.String").$new(caption).getBytes("UTF-8"), 2) : "";
+      console.log("[WA Listener] Image message detected: " + mediaUrl);
+      return {
+        type,
+        is_group: chatInfo.type === "group",
+        chat: {
+          uuid: chatInfo.uuid,
+          name: chatInfo.username,
+          type: chatInfo.type
+        },
+        user_info: {
+          uuid: senderInfo.uuid,
+          username: senderInfo.username,
+          phone: senderInfo.phone
+        },
+        content: encodedContent,
+        caption: encodedCaption,
+        media_type: "image",
+        media_url: mediaUrl,
         time: dateStr
       };
     }
@@ -13147,11 +13239,11 @@ function init2(db, table, initialValues) {
               }
             }
           }
-        } catch (e) { } finally {
+        } catch (e) {} finally {
           if (contactDb)
             try {
               contactDb.close();
-            } catch (e) { }
+            } catch (e) {}
         }
         if (result.user_info.username === "Unknown") {
           try {
@@ -13168,7 +13260,7 @@ function init2(db, table, initialValues) {
               if (memCursor)
                 memCursor.close();
             }
-          } catch (e) { }
+          } catch (e) {}
         }
         try {
           let phoneCursor = db.rawQuery("SELECT normalized_phone FROM normalized_phone WHERE mid = ? LIMIT 1", frida_java_bridge_default.array("java.lang.String", [fromMid]));
@@ -13182,7 +13274,7 @@ function init2(db, table, initialValues) {
             if (phoneCursor)
               phoneCursor.close();
           }
-        } catch (e) { }
+        } catch (e) {}
       }
       return result;
     }
@@ -13198,27 +13290,27 @@ function send2(userId, displayName, message) {
 }
 
 // modules/wa_message_sender.js
-var waSendMessage = function (phoneNumber, messageText) {
+var waSendMessage = function(phoneNumber, messageText) {
   return new Promise((resolve, reject) => {
-    frida_java_bridge_default.perform(function () {
+    frida_java_bridge_default.perform(function() {
       try {
-        let getContext = function () {
+        let getContext = function() {
           var currentApplication = ActivityThread.currentApplication();
           if (currentApplication == null)
             return null;
           return currentApplication.getApplicationContext();
-        }, clickSendButton = function (attempts) {
+        }, clickSendButton = function(attempts) {
           if (!attempts)
             attempts = 0;
           if (attempts > 20) {
             console.log("   [-] Failed to find Send button after retries.");
             return;
           }
-          frida_java_bridge_default.scheduleOnMainThread(function () {
+          frida_java_bridge_default.scheduleOnMainThread(function() {
             var found = false;
             console.log("   [*] Searching UI for Send button... Attempt " + attempts);
             try {
-              let checkAndClick = function (instance) {
+              let checkAndClick = function(instance) {
                 var desc = instance.getContentDescription();
                 var resourceName = "";
                 try {
@@ -13226,7 +13318,7 @@ var waSendMessage = function (phoneNumber, messageText) {
                   if (id !== -1) {
                     resourceName = instance.getResources().getResourceEntryName(id);
                   }
-                } catch (e) { }
+                } catch (e) {}
                 if (desc && desc.toString().toLowerCase() === "send") {
                   if (instance.isShown()) {
                     console.log("   [+] Found VISIBLE Send button (by Desc) -> Clicking.");
@@ -13245,20 +13337,20 @@ var waSendMessage = function (phoneNumber, messageText) {
                 }
               };
               frida_java_bridge_default.choose("android.widget.ImageView", {
-                onMatch: function (instance) {
+                onMatch: function(instance) {
                   if (!found)
                     checkAndClick(instance);
                 },
-                onComplete: function () {
+                onComplete: function() {
                   if (!found) {
                     frida_java_bridge_default.choose("android.widget.ImageButton", {
-                      onMatch: function (instance) {
+                      onMatch: function(instance) {
                         if (!found)
                           checkAndClick(instance);
                       },
-                      onComplete: function () {
+                      onComplete: function() {
                         if (!found) {
-                          setTimeout(function () {
+                          setTimeout(function() {
                             clickSendButton(attempts + 1);
                           }, 500);
                         }
@@ -13275,7 +13367,7 @@ var waSendMessage = function (phoneNumber, messageText) {
         var ActivityThread = frida_java_bridge_default.use("android.app.ActivityThread");
         var Uri = frida_java_bridge_default.use("android.net.Uri");
         var Intent = frida_java_bridge_default.use("android.content.Intent");
-        frida_java_bridge_default.scheduleOnMainThread(function () {
+        frida_java_bridge_default.scheduleOnMainThread(function() {
           try {
             var context = getContext();
             if (!context) {
@@ -13289,7 +13381,7 @@ var waSendMessage = function (phoneNumber, messageText) {
             intent.setFlags(268435456);
             context.startActivity(intent);
             resolve(true);
-            setTimeout(function () {
+            setTimeout(function() {
               clickSendButton();
             }, 2500);
           } catch (e) {
@@ -13310,27 +13402,27 @@ function send3(phoneNumber, message) {
 }
 
 // modules/wa_business_message_sender.js
-var waBusinessSendMessage = function (phoneNumber, messageText) {
-  return new Promise((resolve, reject) => {
-    frida_java_bridge_default.perform(function () {
+var waBusinessSendMessage = function(phoneNumber, messageText) {
+  return new Promise((resolve, _reject) => {
+    frida_java_bridge_default.perform(function() {
       try {
-        let getContext = function () {
+        let getContext = function() {
           var currentApplication = ActivityThread.currentApplication();
           if (currentApplication == null)
             return null;
           return currentApplication.getApplicationContext();
-        }, clickSendButton = function (attempts) {
+        }, clickSendButton = function(attempts) {
           if (!attempts)
             attempts = 0;
           if (attempts > 20) {
             console.log("   [-] Failed to find Send button after retries.");
             return;
           }
-          frida_java_bridge_default.scheduleOnMainThread(function () {
+          frida_java_bridge_default.scheduleOnMainThread(function() {
             var found = false;
             console.log("   [*] Searching UI for Send button... Attempt " + attempts);
             try {
-              let checkAndClick = function (instance) {
+              let checkAndClick = function(instance) {
                 var desc = instance.getContentDescription();
                 var resourceName = "";
                 try {
@@ -13338,7 +13430,7 @@ var waBusinessSendMessage = function (phoneNumber, messageText) {
                   if (id !== -1) {
                     resourceName = instance.getResources().getResourceEntryName(id);
                   }
-                } catch (e) { }
+                } catch (e) {}
                 if (desc && desc.toString().toLowerCase() === "send") {
                   if (instance.isShown()) {
                     console.log("   [+] Found VISIBLE Send button (by Desc) -> Clicking.");
@@ -13357,20 +13449,20 @@ var waBusinessSendMessage = function (phoneNumber, messageText) {
                 }
               };
               frida_java_bridge_default.choose("android.widget.ImageView", {
-                onMatch: function (instance) {
+                onMatch: function(instance) {
                   if (!found)
                     checkAndClick(instance);
                 },
-                onComplete: function () {
+                onComplete: function() {
                   if (!found) {
                     frida_java_bridge_default.choose("android.widget.ImageButton", {
-                      onMatch: function (instance) {
+                      onMatch: function(instance) {
                         if (!found)
                           checkAndClick(instance);
                       },
-                      onComplete: function () {
+                      onComplete: function() {
                         if (!found) {
-                          setTimeout(function () {
+                          setTimeout(function() {
                             clickSendButton(attempts + 1);
                           }, 500);
                         }
@@ -13387,7 +13479,7 @@ var waBusinessSendMessage = function (phoneNumber, messageText) {
         var ActivityThread = frida_java_bridge_default.use("android.app.ActivityThread");
         var Uri = frida_java_bridge_default.use("android.net.Uri");
         var Intent = frida_java_bridge_default.use("android.content.Intent");
-        frida_java_bridge_default.scheduleOnMainThread(function () {
+        frida_java_bridge_default.scheduleOnMainThread(function() {
           try {
             var context = getContext();
             if (!context) {
@@ -13402,7 +13494,7 @@ var waBusinessSendMessage = function (phoneNumber, messageText) {
             intent.setFlags(268435456);
             context.startActivity(intent);
             resolve(true);
-            setTimeout(function () {
+            setTimeout(function() {
               clickSendButton();
             }, 2500);
           } catch (e) {
@@ -13423,14 +13515,14 @@ function send4(phoneNumber, message) {
 }
 
 // modules/messenger_message_sender.js
-function send5(userId, message) {
+function send5(userId, _message) {
   try {
-    const Intent = Java.use("android.content.Intent");
-    const Uri = Java.use("android.net.Uri");
+    const Intent = frida_java_bridge_default.use("android.content.Intent");
+    const Uri = frida_java_bridge_default.use("android.net.Uri");
     const uri = Uri.parse("fb-messenger://user-thread/" + userId);
     const intent = Intent.$new("android.intent.action.VIEW", uri);
     intent.addFlags(268435456);
-    const ActivityThread = Java.use("android.app.ActivityThread");
+    const ActivityThread = frida_java_bridge_default.use("android.app.ActivityThread");
     const ctx = ActivityThread.currentApplication().getApplicationContext();
     ctx.startActivity(intent);
     return Promise.resolve(true);
@@ -13446,26 +13538,27 @@ var hooksInstalled = false;
 function installHooks() {
   if (hooksInstalled)
     return;
-  setTimeout(function () {
-    frida_java_bridge_default.perform(function () {
+  setTimeout(function() {
+    frida_java_bridge_default.perform(function() {
       try {
         var SQLiteDatabase = frida_java_bridge_default.use("android.database.sqlite.SQLiteDatabase");
-        SQLiteDatabase.insertWithOnConflict.overload("java.lang.String", "java.lang.String", "android.content.ContentValues", "int").implementation = function (table, nullColumnHack, initialValues, conflictAlgorithm) {
+        SQLiteDatabase.insertWithOnConflict.overload("java.lang.String", "java.lang.String", "android.content.ContentValues", "int").implementation = function(table, nullColumnHack, initialValues, conflictAlgorithm) {
           try {
             var dbInstance = frida_java_bridge_default.cast(this, SQLiteDatabase);
-            if (targetPackage === "jp.naver.line.android") {
-              const lineResult = init2(dbInstance, table, initialValues);
-              if (lineResult)
-                send(lineResult);
-            } else if (targetPackage === "com.whatsapp" || targetPackage === "com.whatsapp.w4b") {
-              const waResult = init(this, initialValues);
-              if (waResult)
-                send(waResult);
-            }
+            handleInsert(dbInstance, table, initialValues);
           } catch (error) {
             console.log("[Frida] Hook Error: " + error);
           }
           return this.insertWithOnConflict(table, nullColumnHack, initialValues, conflictAlgorithm);
+        };
+        SQLiteDatabase.insert.overload("java.lang.String", "java.lang.String", "android.content.ContentValues").implementation = function(table, nullColumnHack, initialValues) {
+          try {
+            var dbInstance = frida_java_bridge_default.cast(this, SQLiteDatabase);
+            handleInsert(dbInstance, table, initialValues);
+          } catch (error) {
+            console.log("[Frida] Hook Error: " + error);
+          }
+          return this.insert(table, nullColumnHack, initialValues);
         };
         hooksInstalled = true;
         console.log("[Frida] Hooks installed for " + targetPackage);
@@ -13475,20 +13568,35 @@ function installHooks() {
     });
   }, 1000);
 }
+function handleInsert(dbInstance, table, initialValues) {
+  try {
+    if (targetPackage === "jp.naver.line.android") {
+      const lineResult = init2(dbInstance, table, initialValues);
+      if (lineResult)
+        send(lineResult);
+    } else if (targetPackage === "com.whatsapp" || targetPackage === "com.whatsapp.w4b") {
+      const waResult = init(dbInstance, initialValues);
+      if (waResult)
+        send(waResult);
+    }
+  } catch (error) {
+    console.log("[Frida] HandleInsert Error: " + error);
+  }
+}
 rpc.exports = {
-  lineSend: function (userId, displayName, message) {
+  lineSend: function(userId, displayName, message) {
     return send2(userId, displayName, message);
   },
-  waSend: function (phoneNumber, message) {
+  waSend: function(phoneNumber, message) {
     return send3(phoneNumber, message);
   },
-  waBusinessSend: function (phoneNumber, message) {
+  waBusinessSend: function(phoneNumber, message) {
     return send4(phoneNumber, message);
   },
-  messengerSend: function (userId, message) {
+  messengerSend: function(userId, message) {
     return send5(userId, message);
   },
-  setTargetPackage: function (pkg) {
+  setTargetPackage: function(pkg) {
     targetPackage = pkg;
     console.log("[Frida] Target package set to: " + targetPackage);
     installHooks();
